@@ -102,6 +102,8 @@ Un NON lié à l'incertitude ne signifie pas automatiquement vente interdite ou 
 
 ## Interface
 
+Direction retenue : **Style C — SaaS premium + clarté opérationnelle**.
+
 Le verdict doit être immédiatement visible.
 
 Même en cas de NON :
@@ -112,6 +114,18 @@ Même en cas de NON :
 Les messages utilisateur sont en français.
 
 Les reason codes et états techniques restent en anglais.
+
+### Responsive
+
+La compatibilité responsive complète fait partie de la V1 :
+- desktop ;
+- tablette ;
+- iPhone / Safari ;
+- Android / Chrome.
+
+La V1 est une application web responsive ; une application native iOS/Android n'est pas requise.
+
+Aucune fonctionnalité métier ne doit disparaître sur mobile.
 
 ## Amazon
 
