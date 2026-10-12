@@ -206,11 +206,11 @@ Mobile :
 ```text
 [ Verdict ]
 
+[ Point à vérifier ]   ← si verdict NON
+
 [ Emballages ]
 [ DEEE ]
 [ Batteries ]
-
-[ Point à vérifier ]
 
 [ Ce qui est vérifié ]
 
@@ -218,7 +218,7 @@ Mobile :
 [ Détails techniques ]
 ```
 
-Le verdict et le point bloquant doivent rester visibles très tôt dans le scroll.
+Sur un NON, le point bloquant principal doit apparaître immédiatement après le verdict, avant les cartes filières, afin de rester visible sans long scroll. Les éléments déjà vérifiés restent ensuite pleinement visibles.
 
 ### Navigation mobile
 
