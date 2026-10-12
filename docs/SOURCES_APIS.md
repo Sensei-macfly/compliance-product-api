@@ -111,7 +111,7 @@ Statut : **SOURCE CANDIDATE DU PILOTE FRANCE / EEE**. Ce registre permet de vér
 
 Limite centrale : le jeu établit un enregistrement d'une entité dans une filière/catégorie. Il ne prouve pas la relation entre le produit identifié par GTIN, le vendeur évalué, son fournisseur et l'entité enregistrée. Cette relation doit venir d'une source indépendante ou rester **NON VÉRIFIÉE**.
 
-Pour le modèle confirmé (notre société est vendeuse sur Amazon et utilise FBA), l'API ADEME peut contribuer à vérifier une inscription française pour l'entité et la filière interrogées. Elle ne détermine pas si notre société doit elle-même s'enregistrer, ne prouve pas qu'un fournisseur couvre ce GTIN/SKU, et ne décrit ni les passages en prep center ni les pays de stockage FBA. Ces faits et l'applicabilité doivent être évalués séparément pour chaque route et marché cible.
+Pour un client vendeur sur Amazon et utilisant FBA, l'API ADEME peut contribuer à vérifier une inscription française pour l'entité et la filière interrogées. Elle ne détermine pas si la société vendeuse évaluée doit elle-même s'enregistrer, ne prouve pas qu'un fournisseur couvre ce GTIN/SKU, et ne décrit ni les passages en prep center ni les pays de stockage FBA. Ces faits et l'applicabilité doivent être évalués séparément pour chaque route candidate et marché cible.
 
 Références officielles :
 - [Recherche de producteurs REP (ADEME)](https://filieres-rep.ademe.fr/recherche-producteurs)

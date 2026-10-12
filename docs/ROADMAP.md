@@ -7,11 +7,11 @@ Valider séparément la faisabilité technique et réglementaire du moteur REP/E
 ## Phase 0 — Spécification
 
 - [x] positionnement MVP autonome
-- [x] confirmer le modèle de base : notre société vend sur Amazon et utilise FBA
+- [x] confirmer le modèle de départ : le créateur vend sur Amazon et utilise FBA ; l'outil doit évaluer plusieurs clients
 - [x] distinguer fournisseur, stockage initial, prep center, stock FBA et marché cible
-- [ ] choisir une première route end-to-end représentative (pays source/stock → prep center(s) → pays FBA → marché)
-- [ ] obtenir les pays d'inventaire FBA et le programme réellement utilisés pour cette route
-- [ ] valider les informations nécessaires sur l'entité, son rôle et le parcours de vente
+- [ ] spécifier la génération dynamique des routes à partir du profil client, des sources, du produit, des prep centers, de FBA et des marketplaces demandées
+- [ ] définir les sources des contraintes opérationnelles FBA et des transitions logistiques ; ne pas les déduire des pays de TVA
+- [ ] définir les données d'entité, preuves et contraintes transmises par le client ou une application tierce
 - [x] définir les états VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE
 - [x] définir le standard provisoire d'une preuve positive et les conditions d'une absence concluante
 - [x] UX proposée à deux champs, mais non suffisante pour établir seule un résultat REP/EPR
@@ -24,24 +24,24 @@ Valider séparément la faisabilité technique et réglementaire du moteur REP/E
 
 ### Gate avant développement du moteur
 
-- [ ] sélectionner la première route réelle à examiner parmi les achats fournisseurs/grossistes UE, prep centers et programmes FBA utilisés ;
-- [ ] préciser l'entité légale de notre société vendeuse, le rôle du fournisseur, le programme FBA, les pays de stock et le marché cible de cette route ;
-- [ ] faire valider la portée REP/EPR et les règles de cette route par une personne compétente ;
-- [ ] produire une chaîne de preuves de bout en bout ; l'IDU ADEME seul ne relie pas une société au produit/GTIN ni à notre société vendeuse ;
+- [ ] valider le générateur sur des jeux de cas multi-client représentant différentes sources, prep centers, profils FBA et marketplaces, sans route codée en dur ;
+- [ ] faire valider par une personne compétente les règles REP/EPR des marchés et rôles effectivement pris en charge ;
+- [ ] produire une chaîne de preuves de bout en bout ; l'IDU ADEME seul ne relie pas une société au produit/GTIN ni à l'entité vendeuse du client ;
 - [ ] décrire la stratégie de synchronisation, l'attribution de la source, la fraîcheur et les cas d'indisponibilité ;
 - [ ] définir les mesures de fiabilité positive, de couverture et de résultats indéterminés sur des cas de référence tenus à l'écart des règles.
 
-Si cette gate échoue, ne pas masquer le problème par des verdicts NON générés à partir d'une absence de preuve ; réduire ou revoir la promesse du pilote.
+Si cette gate échoue, ne jamais produire OUI à partir d'une route ou d'une preuve supposée ; retourner NON avec une explication, sans prétendre qu'une obligation légale ou une interdiction est établie.
 
 ## Phase 1 — Fondations
 
-- [ ] créer un modèle de route multi-étapes couvrant fournisseur/stock → prep center(s) → inventaire FBA → marché cible ;
-- [ ] produire un résultat par route × marché cible × filière ; marquer NON VÉRIFIÉ toute combinaison dont les règles ou sources ne sont pas auditées ;
+- [ ] créer un générateur de routes multi-étapes depuis les options de sourcing/stock, le profil client, les prep centers disponibles, les contraintes FBA et les marketplaces demandées ;
+- [ ] produire un résultat par route générée × marché cible × filière ; afficher NON pour toute combinaison dont les règles ou sources ne sont pas auditées, tout en conservant NON VÉRIFIÉ en interne ;
 - [ ] commencer la vérification de source par l'ADEME France / EEE, sans présenter ce connecteur comme un parcours end-to-end validé ;
 - [ ] Next.js / TypeScript
 - [ ] PostgreSQL / Prisma
 - [ ] schéma de données
 - [ ] auth simple
+- [ ] isolation tenant pour profils, routes, analyses et preuves
 - [ ] validation identifiants EAN/GTIN/UPC/ASIN
 - [ ] système de providers
 - [ ] audit logging / evidence model
@@ -104,8 +104,10 @@ Pour chaque pays :
 - [ ] pays de stock initial et pays des prep centers
 - [ ] programme FBA et pays d'inventaire connus
 - [ ] fiche produit
-- [ ] matrice de toutes les routes réellement fournies × marchés cibles demandés
+- [ ] matrice de toutes les routes candidates générées × marchés cibles demandés
 - [ ] routes/règles non prises en charge affichées NON, avec explication claire et état technique conservé en interne
+- [ ] configuration multi-client : pays TVA, prep centers disponibles, transitions logistiques, programmes et pays FBA permis/connus
+- [ ] API directe pour que des applications tierces envoient des données enrichies au même moteur
 - [ ] raisons et preuves associées à chaque décision OUI / NON
 - [ ] entité qui devrait s'enregistrer et preuves de couverture amont
 - [ ] obligations détectées
@@ -128,7 +130,7 @@ Tester d'abord sur un corpus de cas représentatifs revus indépendamment :
 - mêmes fournisseur/GTIN vers deux marchés cibles différents ;
 - même marché cible avec des pays de stock initial/FBA différents ;
 - routes avec couverture amont liée au SKU et routes sans preuve de ce lien ;
-- obligations établies de notre société, de l'entité amont et cas où le rôle reste indéterminé ;
+- obligations établies de l'entité vendeuse évaluée, de l'entité amont et cas où le rôle reste indéterminé ;
 - pays de stock FBA inconnu ;
 - registre indisponible.
 

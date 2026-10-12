@@ -6,19 +6,22 @@ MVP autonome de **vérification de preuves REP/EPR par produit et parcours de ve
 
 Répondre à la question :
 
-> **Pour cette route et ce marché, peut-on poursuivre sans nouvel enregistrement REP/EPR/IDU de notre société, preuves à l'appui ?**
+> **Pour chaque client, quelles routes vers ses marketplaces cibles peuvent être poursuivies sans nouvel enregistrement REP/EPR/IDU, preuves à l'appui ?**
 
 ### Parcours à analyser
 
-La société de l'utilisateur vend sur Amazon et utilise FBA. Le modèle doit distinguer :
+Le moteur est multi-client et l'analyse doit être générée à partir du profil de chaque client. Pour un vendeur Amazon/FBA, elle distingue :
 - EAN / GTIN / UPC / ASIN et attributs nécessaires à la classification ;
 - fournisseur et pays où le stock est physiquement détenu ;
-- prep centers traversés ;
-- programme FBA et pays d'inventaire connus ;
-- marché de revente ciblé ;
+- pays où le client détient une immatriculation TVA, comme donnée de profil et non comme preuve REP/EPR ;
+- prep centers réellement disponibles ;
+- programme FBA et pays d'inventaire permis ou connus ;
+- marketplaces cibles demandées ;
 - entité vendeuse et éventuelle entité amont censée remplir les obligations, avec preuves du lien au produit/SKU.
 
-Le pays d'établissement du fournisseur, le pays de stock et le marché de vente ne sont pas interchangeables. L'API Amazon peut rester facultative ; les faits de route inconnus donnent une décision NON.
+Le moteur génère des routes candidates depuis ces faits, sans route unique codée en dur. Le pays d'établissement du fournisseur, le pays de stock et le marché de vente ne sont pas interchangeables. Un pays de TVA ou une marketplace cible ne permet pas d'inférer le pays de stockage FBA. L'API Amazon peut rester facultative ; les faits de route inconnus donnent une décision NON.
+
+Le dashboard et les applications clientes tierces utilisent le même moteur API-first, avec des données isolées par client.
 
 ### Marchés analysés
 - France
@@ -29,11 +32,11 @@ Le pays d'établissement du fournisseur, le pays de stock et le marché de vente
 
 ### Sortie
 
-La décision visible est binaire, par route réelle × marché cible × filière :
-- **OUI** : les preuves démontrent que la route peut être poursuivie sans nouvel enregistrement de notre société ;
+La décision visible est binaire, par route candidate générée × marché cible × filière :
+- **OUI** : les preuves démontrent que la route peut être poursuivie sans nouvel enregistrement de la société évaluée ;
 - **NON** : cette démonstration manque ou les preuves établissent qu'une exigence n'est pas satisfaite.
 
-Les états détaillés (VÉRIFIÉ, NON CONFORME, NON VÉRIFIÉ, CONTRADICTOIRE) et les raisons restent internes. Un NON fondé sur des preuves insuffisantes n'est pas une interdiction juridique ni la preuve, à lui seul, que notre société doit s'enregistrer ; l'explication indique ce qui manque. **UNKNOWN ≠ COMPLIANT**.
+Les états détaillés (VÉRIFIÉ, NON CONFORME, NON VÉRIFIÉ, CONTRADICTOIRE) et les raisons restent internes. Un NON fondé sur des preuves insuffisantes n'est pas une interdiction juridique ni la preuve, à lui seul, que la société évaluée doit s'enregistrer ; l'explication indique ce qui manque. **UNKNOWN ≠ COMPLIANT**.
 
 ## Positionnement
 

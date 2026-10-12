@@ -2,7 +2,7 @@
 
 ## Architecture produit
 
-Le MVP doit être conçu **API-first / headless-first** afin de pouvoir être intégré ultérieurement dans Solenda. Le dashboard V1 sert essentiellement à tester et expliquer le moteur.
+Le MVP est **API-first / headless-first** : son dashboard et les applications clientes tierces appellent le même moteur avec des données enrichies. Les dossiers et configurations sont isolés par client/tenant ; Solenda pourra aussi l'intégrer ultérieurement.
 
 ## Pipeline
 
@@ -21,9 +21,11 @@ Corporate Graph
         ↓
 Seller / supplier / claimed responsible entity resolution
         ↓
-Supplier stock → prep center(s) → FBA inventory country/countries
+Client profile: VAT countries, available prep centers, FBA programs/countries
         ↓
-Amazon target marketplace(s)
+Sourcing/stock options + requested target marketplaces
+        ↓
+Candidate Route Generator (supported transitions only; no hard-coded route)
         ↓
 EPR Classification
 Product facts → filière and applicable categories
@@ -83,7 +85,11 @@ Chaque relation conserve sa source et sa date de vérification.
 
 Ajouter une relation entre l'entité qui doit remplir l'obligation et le parcours produit/commercial évalué. Ne pas déduire cette relation de la seule marque, du propriétaire du GTIN ou d'une société du même groupe.
 
-Modéliser séparément notre société vendeuse sur Amazon, le fournisseur/grossiste, l'opérateur du prep center, Amazon comme place de marché/fulfillment, et l'entité amont prétendue responsable. Une déclaration d'IDU ne suffit pas : conserver la preuve qui relie l'entité amont au produit/SKU, à la filière/catégorie et au marché concerné.
+Modéliser séparément l'entité vendeuse du client, le fournisseur/grossiste, l'opérateur du prep center, Amazon comme place de marché/fulfillment, et l'entité amont prétendue responsable. Une déclaration d'IDU ne suffit pas : conserver la preuve qui relie l'entité amont au client, au produit/SKU, à la filière/catégorie et au marché concerné.
+
+### Candidate Route Generator
+
+Générer les routes candidates à partir des sources/lieux de stock, du profil client, du produit, des prep centers disponibles, des contraintes FBA et des marketplaces demandées. Ne pas coder de route fixe ni énumérer des permutations sans transitions logistiques étayées. Les pays TVA peuvent être des contraintes d'entrée uniquement lorsqu'une règle de routage l'établit ; ils ne prouvent ni l'éligibilité FBA ni la conformité REP/EPR. Si le programme ou les pays d'inventaire FBA ne sont pas connus, ne pas les déduire du marché cible : garder la route en NON avec état interne UNVERIFIED.
 
 ### EPR Classification
 Minimum V1 :
@@ -97,28 +103,39 @@ Prévoir une architecture extensible pour d'autres filières sans les implément
 Entrée minimale à valider pour chaque parcours :
 ```json
 {
-  "product_id": "...",
-  "seller_entity_id": "...",
-  "existing_epr_evidence_ids": ["..."],
+  "identifier": "8710103995426",
+  "client_configuration": {
+    "seller_entity_id": "...",
+    "existing_epr_evidence_ids": ["..."],
+    "vat_registration_countries": ["FR", "DE"],
+    "available_prep_centers": [
+      {"id": "prep-1", "country": "FR", "eligible_product_types": ["..."]}
+    ],
+    "amazon_fulfillment_profiles": [
+      {"program": "...", "eligible_inventory_countries": ["FR", "DE"]}
+    ],
+    "supported_logistics_transitions": [
+      {"from_stock_country": "DE", "via_prep_center_id": "prep-1", "to_fba_country": "FR"}
+    ]
+  },
+  "sourcing_options": [
+    {
+      "supplier_entity_id": "...",
+      "supplier_establishment_country": "DE",
+      "available_stock_countries": ["DE", "PL"]
+    }
+  ],
+  "target_markets": ["FR", "DE", "IT", "ES", "GB"],
   "product_facts": {
     "category_attributes": {},
     "packaging_attributes": {},
     "embedded_battery": null
   },
-  "sales_channel": {
-    "marketplace": "AMAZON",
-    "fulfillment": "FBA"
-  },
-  "routes": [
+  "upstream_claims": [
     {
-      "supplier_entity_id": "...",
-      "supplier_establishment_country": "DE",
-      "supplier_stock_country": "DE",
-      "prep_center_countries": ["FR"],
-      "amazon_fulfillment_program": "...",
-      "fba_inventory_countries": ["FR"],
-      "target_markets": ["FR", "DE", "IT", "ES", "GB"],
       "claimed_responsible_entity_id": "...",
+      "product_or_sku_scope": "...",
+      "stream": "EEE",
       "evidence_ids": ["..."]
     }
   ]
@@ -178,13 +195,20 @@ Sortie :
 
 PostgreSQL.
 
+Toutes les données client, options de sourcing, configurations logistiques, routes générées, analyses et preuves doivent être isolées par tenant. Résoudre le tenant depuis l'authentification et appliquer le contrôle d'accès côté API et persistance.
+
 Entités principales :
 - users
+- client_profiles
+- client_vat_countries
 - user_prep_centers
+- client_fba_profiles
 - seller_profiles
 - supplier_profiles
+- sourcing_options
 - supply_routes
 - route_segments
+- candidate_routes
 - products
 - product_identifiers
 - brands
@@ -209,7 +233,7 @@ Réutiliser les résolutions existantes :
 - entity + country + stream + category → EPR registration
 - seller + product + actual route + target market + stream + rule version → analysis result
 
-Une actual route est une chaîne fournie ou observée pour un produit, pas une combinaison théorique créée en croisant tous les pays. Si un utilisateur demande un marché cible pour lequel aucune règle n'est validée, renvoyer UNVERIFIED plutôt que de le retirer de la matrice.
+Les routes candidates sont générées depuis les données d'un client et des transitions logistiques/FBA étayées, pas à partir d'une route codée en dur ni d'un produit cartésien de pays. Un changement de profil, de source, de prep center ou de configuration FBA invalide les résultats générés. Si une marketplace demandée n'a pas de règle validée, produire NON et conserver UNVERIFIED en interne plutôt que de la retirer de la matrice.
 
 ## Synchronisation
 
