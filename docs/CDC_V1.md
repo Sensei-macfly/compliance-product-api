@@ -27,7 +27,16 @@ Une requête analyse une seule marketplace cible.
 Entrées minimales :
 1. `identifier` : EAN / GTIN / UPC / ASIN ;
 2. `supplier_stock_country` : pays où le produit est **physiquement stocké chez le fournisseur au moment du sourcing** ;
-3. `target_marketplace` : FR / DE / IT / ES / GB.
+3. `target_marketplace` : FR / DE / IT / ES / GB ;
+4. `product_handling_mode` : fait explicite décrivant l'état dans lequel le vendeur revendra le produit.
+
+Valeurs V1 :
+- `ORIGINAL_UNMODIFIED` : produit revendu tel que fourni, dans son emballage commercial d'origine, sans bundle, reconditionnement ni modification d'emballage ;
+- `BUNDLED` : hors périmètre V1 => NON/UNVERIFIED ;
+- `REPACKAGED` : hors périmètre V1 => NON/UNVERIFIED ;
+- `UNKNOWN` : NON/UNVERIFIED.
+
+Le champ ne doit jamais recevoir `ORIGINAL_UNMODIFIED` par défaut. Il doit provenir d'une confirmation explicite de l'utilisateur ou d'un fait amont fiable. Champ absent => NON/UNVERIFIED.
 
 `supplier_stock_country` ne signifie pas :
 - pays de facturation ;
@@ -74,15 +83,21 @@ La V1 peut omettre la **modélisation** d'une route ; elle ne peut pas omettre u
 
 ## 5. Hypothèse produit V1
 
-La V1 suppose :
+La V1 n'infère jamais l'état du produit ou de son emballage à partir du silence.
+
+Pour être éligible à une conclusion favorable V1, `product_handling_mode` doit être explicitement `ORIGINAL_UNMODIFIED`.
+
+Cette valeur signifie :
 - produit revendu dans son état commercial d'origine ;
 - pas de bundle créé par le vendeur ;
 - pas de reconditionnement ;
 - pas de modification d'emballage susceptible de créer une nouvelle obligation.
 
-Ces cas sont réservés à une V2.
+`BUNDLED`, `REPACKAGED`, `UNKNOWN` ou champ absent => NON/UNVERIFIED.
 
-Si le moteur apprend qu'un produit est bundlé, reconditionné ou que son emballage a été modifié contrairement à l'hypothèse V1, il ne doit pas continuer l'analyse comme si l'hypothèse était respectée : la conclusion favorable est bloquée et le résultat reste NON/UNVERIFIED jusqu'à une analyse prenant ce cas en charge.
+L'attestation `ORIGINAL_UNMODIFIED` permet seulement de satisfaire l'hypothèse de périmètre V1. Si une règle pays × filière exige une preuve réglementaire plus forte de ce fait, l'attestation seule ne suffit pas : la preuve requise doit être obtenue, sinon NON/UNVERIFIED.
+
+Ces cas sont réservés à une V2 lorsqu'ils ne sont pas pris en charge par une règle V1 documentée.
 
 ## 6. Amazon
 
@@ -242,9 +257,12 @@ Cette section est la **source normative unique** du contrat V1.
 {
   "identifier": "8710103995426",
   "supplier_stock_country": "IT",
-  "target_marketplace": "DE"
+  "target_marketplace": "DE",
+  "product_handling_mode": "ORIGINAL_UNMODIFIED"
 }
 ```
+
+`product_handling_mode` est obligatoire pour permettre un OUI. Son absence ou la valeur `UNKNOWN` force NON/UNVERIFIED.
 
 ### Requête enrichie
 
@@ -253,6 +271,7 @@ Cette section est la **source normative unique** du contrat V1.
   "identifier": "8710103995426",
   "supplier_stock_country": "IT",
   "target_marketplace": "DE",
+  "product_handling_mode": "ORIGINAL_UNMODIFIED",
   "product": {
     "asin": "B0XXXX",
     "brand": "Example",
@@ -276,6 +295,7 @@ Cette section est la **source normative unique** du contrat V1.
   "analysis_id": "uuid",
   "supplier_stock_country": "IT",
   "target_marketplace": "DE",
+  "product_handling_mode": "ORIGINAL_UNMODIFIED",
   "overall_verdict": "NON",
   "stream_scope_state": "COMPLETE",
   "streams": [
@@ -298,7 +318,20 @@ Cette section est la **source normative unique** du contrat V1.
       ],
       "reason_codes": ["UPSTREAM_COVERAGE_VERIFIED"],
       "user_message_fr": "Couverture amont vérifiée pour les emballages.",
-      "evidence": []
+      "evidence": [
+        {
+          "evidence_id": "ev-packaging-registry-001",
+          "type": "OFFICIAL_REGISTRY_RECORD",
+          "source_name": "Official packaging registry",
+          "supports": ["REGISTRATION_VALID", "ENTITY_MATCH"]
+        },
+        {
+          "evidence_id": "ev-packaging-scope-002",
+          "type": "PRODUCT_ENTITY_LINK",
+          "source_name": "Resolved product/entity evidence",
+          "supports": ["PRODUCT_SCOPE", "UPSTREAM_ENTITY_RELATION"]
+        }
+      ]
     },
     {
       "stream": "EEE/WEEE",
@@ -345,6 +378,10 @@ Cette section est la **source normative unique** du contrat V1.
 - une filière UNRESOLVED force NON ;
 - un scope de filières UNRESOLVED force NON ;
 - l'immatriculation propre du vendeur n'est pas utilisée comme raccourci pour produire OUI ;
+- `product_handling_mode` absent, `UNKNOWN`, `BUNDLED` ou `REPACKAGED` interdit un OUI V1 ;
+- `ORIGINAL_UNMODIFIED` ne peut jamais être injecté comme valeur par défaut : il doit provenir d'une attestation explicite ou d'un fait fiable ;
+- pour toute filière `APPLICABLE` avec `verdict = OUI`, `evidence[]` doit être non vide et permettre de remonter aux preuves ayant établi l'enregistrement, l'entité et la portée de couverture requise ;
+- `APPLICABLE + OUI + evidence=[]` est invalide par contrat ;
 - si la responsabilité, l'applicabilité ou la couverture dépend d'un fait réglementaire requis mais absent ou hors périmètre V1, le verdict concerné est NON/UNVERIFIED ; aucun fait favorable n'est supposé.
 
 ## 15. Reason codes minimaux
@@ -368,6 +405,8 @@ Codes internes en anglais :
 - INSUFFICIENT_OFFICIAL_EVIDENCE
 - REQUIRED_REGULATORY_FACT_MISSING
 - V1_SCOPE_ASSUMPTION_VIOLATED
+- PRODUCT_HANDLING_UNCONFIRMED
+- REQUIRED_EVIDENCE_MISSING
 
 L'interface utilisateur affiche des explications en français et ne montre pas les codes bruts par défaut.
 
@@ -432,7 +471,10 @@ Pas de tables V1 pour :
 - achat / stock dans un pays ≠ couverture automatique dans le marché cible ;
 - une inscription propre du vendeur ≠ couverture amont favorable ;
 - fait réglementaire requis absent ou hors périmètre V1 => NON/UNVERIFIED ;
-- hypothèse V1 connue comme fausse (bundle, reconditionnement, modification d'emballage) => NON/UNVERIFIED, jamais OUI par défaut.
+- `product_handling_mode` absent ou UNKNOWN => NON/UNVERIFIED ;
+- BUNDLED ou REPACKAGED => NON/UNVERIFIED en V1 ;
+- hypothèse V1 connue comme fausse (bundle, reconditionnement, modification d'emballage) => NON/UNVERIFIED, jamais OUI par défaut ;
+- filière APPLICABLE avec OUI et `evidence=[]` => réponse invalide ; le moteur doit retourner NON/UNVERIFIED tant que les preuves requises ne sont pas présentes.
 
 ## 19. Hors périmètre V1
 
@@ -456,6 +498,7 @@ Pour chaque combinaison pays × filière × rôle activée :
 - corpus figé avant évaluation ;
 - 0 faux OUI sur le corpus ;
 - 100 % des OUI traçables jusqu'aux sources et à la version de règle ;
+- aucune filière APPLICABLE ne peut être OUI avec `evidence=[]` ;
 - au moins 3 cas positifs indépendamment revus ;
 - au moins 3 cas négatifs ou ambigus ;
 - 100 % des cas positifs de référence reconnus comme OUI ;
@@ -466,7 +509,7 @@ Ce minimum est acceptable pour un pilote limité, pas pour une validation à gra
 ## 21. Critères d'acceptation V1
 
 La V1 est fonctionnelle si :
-1. elle accepte identifiant + pays physique du stock fournisseur + marketplace cible ;
+1. elle accepte identifiant + pays physique du stock fournisseur + marketplace cible + `product_handling_mode` explicite ;
 2. elle fonctionne sans pays FBA ;
 3. elle fonctionne sans prep center ;
 4. elle résout produit et entités ;
@@ -481,4 +524,6 @@ La V1 est fonctionnelle si :
 13. Amazon SP-API n'est pas obligatoire ;
 14. le dashboard reste pleinement fonctionnel sans scroll horizontal sur iPhone et Android, avec les mêmes informations et actions essentielles que sur desktop ;
 15. une règle qui dépend d'un fait réglementaire exclu/non disponible ne peut jamais produire OUI ;
-16. un cas connu de bundle, reconditionnement ou modification d'emballage est bloqué comme hors hypothèse V1 au lieu d'être traité comme le produit d'origine.
+16. un cas connu de bundle, reconditionnement ou modification d'emballage est bloqué comme hors hypothèse V1 au lieu d'être traité comme le produit d'origine ;
+17. champ `product_handling_mode` absent ou UNKNOWN => NON/UNVERIFIED ;
+18. toute filière APPLICABLE avec OUI possède une chaîne `evidence[]` non vide et traçable.
