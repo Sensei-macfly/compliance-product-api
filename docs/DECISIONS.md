@@ -44,6 +44,18 @@ Supprimés :
 
 Le moteur ne doit pas essayer de deviner ce qu'Amazon fera du stock.
 
+### Limite de sécurité
+
+Supprimer la route logistique ne signifie pas ignorer un fait réglementaire nécessaire.
+
+Si une règle pays × filière × rôle dépend d'un fait non disponible ou hors périmètre V1 — rôle d'importateur, première mise sur le marché, modification d'emballage, bundle/reconditionnement ou autre fait logistique juridiquement pertinent — alors :
+- aucune valeur favorable n'est supposée ;
+- la filière est UNVERIFIED/UNRESOLVED ;
+- le verdict est NON ;
+- l'overall ne peut pas être OUI.
+
+La V1 reste donc fail-closed sur les faits réglementaires requis.
+
 ## Hypothèse produit
 
 V1 :
@@ -54,6 +66,8 @@ V1 :
 - pas de modification d'emballage.
 
 Bundle / repackaging / prep center à impact réglementaire : V2.
+
+Si un cas analysé est connu comme contraire à cette hypothèse V1, il est traité comme hors scope/UNVERIFIED et ne peut pas obtenir OUI.
 
 ## Granularité du résultat
 
