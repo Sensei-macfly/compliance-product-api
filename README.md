@@ -1,58 +1,58 @@
 # compliance-product-api
 
-MVP autonome de **vérification de preuves REP/EPR par produit et parcours de vente**, destiné à être testé séparément puis éventuellement intégré à **Solenda**. Il ne produit pas une autorisation générale de vente.
+MVP autonome de **vérification REP/EPR par produit et parcours de vente**, conçu pour être testé séparément puis intégré à **Solenda** via API.
 
 ## Objectif
 
 Répondre à la question :
 
-> **Pour chaque client, quelles routes vers ses marketplaces cibles peuvent être poursuivies sans nouvel enregistrement REP/EPR/IDU, preuves à l'appui ?**
+> **À partir des faits connus sur le produit, le sourcing, la marketplace cible et la configuration du client, quelles routes permettent de poursuivre la vente sans nouvel enregistrement REP/EPR/IDU ?**
 
-### Parcours à analyser
+Le moteur doit **déduire les routes candidates**. Il ne doit pas demander au client de deviner lui-même les pays FBA possibles ni de construire manuellement le trajet.
 
-Le moteur est multi-client et l'analyse doit être générée à partir du profil de chaque client. Pour un vendeur Amazon/FBA, elle distingue :
-- EAN / GTIN / UPC / ASIN et attributs nécessaires à la classification ;
-- fournisseur et pays où le stock est physiquement détenu ;
-- pays où le client détient une immatriculation TVA, comme donnée de profil et non comme preuve REP/EPR ;
+## Deux modes d'utilisation
+
+### Dashboard autonome
+L'utilisateur saisit les données minimales nécessaires, typiquement :
+- identifiant produit : EAN / GTIN / UPC / ASIN ;
+- pays de sourcing / pays réel du stock fournisseur ;
+- marketplace cible.
+
+Le profil client fournit les faits persistants :
+- entité vendeuse ;
+- pays d'établissement ;
+- pays d'immatriculation TVA ;
 - prep centers réellement disponibles ;
-- programme FBA et pays d'inventaire permis ou connus ;
-- marketplaces cibles demandées ;
-- entité vendeuse et éventuelle entité amont censée remplir les obligations, avec preuves du lien au produit/SKU.
+- paramètres Amazon connus si disponibles.
 
-Le moteur génère des routes candidates depuis ces faits, sans route unique codée en dur. Le pays d'établissement du fournisseur, le pays de stock et le marché de vente ne sont pas interchangeables. Un pays de TVA ou une marketplace cible ne permet pas d'inférer le pays de stockage FBA. L'API Amazon peut rester facultative ; les faits de route inconnus donnent une décision NON.
+### Solenda via API
+Solenda peut transmettre directement les données déjà connues :
+- EAN / GTIN / ASIN ;
+- données produit ;
+- pays de sourcing / stock fournisseur ;
+- marketplace cible ;
+- fournisseur ;
+- contexte compte client ;
+- données Amazon/FBA déjà disponibles.
 
-Le dashboard et les applications clientes tierces utilisent le même moteur API-first, avec des données isolées par client.
-
-### Marchés analysés
-- France
-- Allemagne
-- Italie
-- Espagne
-- Royaume-Uni
-
-### Sortie
-
-La décision visible est binaire, par route candidate générée × marché cible × filière :
-- **OUI** : les preuves démontrent que la route peut être poursuivie sans nouvel enregistrement de la société évaluée ;
-- **NON** : cette démonstration manque ou les preuves établissent qu'une exigence n'est pas satisfaite.
-
-Les états détaillés (VÉRIFIÉ, NON CONFORME, NON VÉRIFIÉ, CONTRADICTOIRE) et les raisons restent internes. Un NON fondé sur des preuves insuffisantes n'est pas une interdiction juridique ni la preuve, à lui seul, que la société évaluée doit s'enregistrer ; l'explication indique ce qui manque. **UNKNOWN ≠ COMPLIANT**.
-
-## Positionnement
-
-Ce projet **n'est pas une plateforme de sourcing**. Solenda reste la plateforme de sourcing. Ce repository sert à valider une brique de compliance REP/EPR indépendante, conçue pour devenir ensuite une API/module intégrable.
+Le dashboard et Solenda doivent utiliser **exactement le même moteur métier et le même contrat API**.
 
 ## Principes V1
 
-- API et registres gratuits/officiels en priorité
-- Amazon SP-API facultative
-- aucune connexion Amazon/SP-API obligatoire ; les données FBA nécessaires doivent toutefois être saisies/importées
-- ne pas demander de numéro de TVA sans besoin de résolution identifié
-- pas d'API commerciale payante indispensable
+- API-first / headless-first
+- aucune connexion Amazon obligatoire
+- Amazon SP-API uniquement comme enrichissement optionnel
+- APIs et registres gratuits/officiels en priorité
+- aucune API commerciale payante indispensable
 - aucun score visible
-- toutes les conclusions doivent être explicables et auditables
+- décision utilisateur : **OUI / NON**
+- états techniques internes conservés pour expliquer le verdict
+- **UNKNOWN ≠ COMPLIANT**
+- un numéro REP/IDU trouvé ne prouve jamais, à lui seul, la couverture d'un produit ou d'un flux
 
-Les marchés cibles déclarés restent la France, l'Allemagne, l'Italie, l'Espagne et le Royaume-Uni. Les pays fournisseurs peuvent couvrir l'ensemble de l'UE. Une combinaison route/marché/filière non auditée reçoit NON.
+## Positionnement
+
+Ce projet **n'est pas une plateforme de sourcing**. Solenda reste la plateforme de sourcing. Ce repository sert à valider une brique de compliance réutilisable sous forme d'API.
 
 ## Documentation
 
