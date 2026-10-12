@@ -1,5 +1,19 @@
 # UX V1 — principes d'interface
 
+## Direction visuelle
+
+Direction retenue : **Style C — SaaS premium + clarté opérationnelle**.
+
+Principes :
+- interface très propre et professionnelle ;
+- hiérarchie visuelle forte ;
+- informations réglementaires importantes visibles sans clic inutile ;
+- peu de couleurs, utilisées avec une sémantique stable ;
+- pas de dashboard surchargé ;
+- pas de graphiques décoratifs inutiles ;
+- pas de score de confiance visible ;
+- pas de formulation « conforme » trop absolue quand le moteur vérifie en réalité une couverture amont.
+
 ## Objectif des 5 premières secondes
 
 L'utilisateur doit comprendre immédiatement :
@@ -31,6 +45,7 @@ Détails techniques
 
 Afficher immédiatement :
 - verdict OUI ;
+- libellé principal : « Couverture amont vérifiée » ;
 - filières applicables ;
 - numéros officiels pertinents ;
 - titulaire ;
@@ -45,12 +60,65 @@ Ne jamais afficher seulement « numéro trouvé = OK ».
 
 Un NON ne masque pas les résultats partiellement positifs.
 
+Libellé principal recommandé :
+> **Couverture complète non démontrée**
+
 Exemple :
 - PACKAGING : numéro officiel vérifié + couverture amont vérifiée ;
 - EEE/WEEE : numéro officiel trouvé mais couverture du produit non démontrée ;
 - BATTERY : non applicable.
 
 Le blocage EEE/WEEE est mis en évidence, mais le numéro PACKAGING reste visible.
+
+Un NON causé par un manque de preuve utilise une présentation d'alerte/ambre plutôt qu'un écran intégralement rouge.
+
+Le rouge est réservé à une contradiction, un enregistrement explicitement invalide ou une non-conformité réellement établie.
+
+## Cartes filières
+
+Pour chaque filière applicable, distinguer explicitement :
+
+```text
+Numéro officiel
+✓ Vérifié / À vérifier
+
+Couverture de ce produit
+✓ Vérifiée / Non démontrée
+```
+
+Les numéros d'enregistrement doivent être visibles directement dans la carte lorsqu'ils sont disponibles.
+
+## Ce qui est vérifié / Point à vérifier
+
+Le résultat doit comporter deux zones faciles à lire :
+
+### Ce qui est vérifié
+
+Exemples :
+- produit identifié ;
+- marque identifiée ;
+- filières applicables déterminées ;
+- entité titulaire identifiée ;
+- numéro officiel vérifié ;
+- registre officiel consulté.
+
+### Point à vérifier
+
+Expliquer en français naturel le fait précis qui empêche actuellement un OUI.
+
+Exemple :
+> Un numéro WEEE officiel a été trouvé et vérifié, mais nous n'avons pas encore pu démontrer que cet enregistrement couvre précisément ce produit ou cette marque.
+
+## Preuves et détails techniques
+
+Les preuves et sources sont disponibles dans une section dépliable.
+
+Les détails techniques sont repliés par défaut et peuvent contenir :
+- `internal_state` ;
+- `reason_codes` ;
+- `stream_scope_state` ;
+- informations de matching ;
+- métadonnées de sources.
 
 ## Vocabulaire utilisateur
 
@@ -71,12 +139,131 @@ Les codes anglais restent disponibles dans les détails techniques / API, pas da
 
 ## Couleurs / sévérité
 
-Le design visuel final sera défini séparément, mais la sémantique doit rester :
-- OUI : favorable démontré ;
-- NON/UNVERIFIED : couverture insuffisamment démontrée ;
-- contradiction explicite : signal plus fort distinct.
+Sémantique recommandée :
+- OUI / vérifié : vert ;
+- NON dû à preuve insuffisante / à vérifier : ambre ;
+- contradiction ou élément explicitement invalide : rouge ;
+- information / action primaire : bleu ;
+- non applicable : neutre.
 
 Un NON ne doit pas être présenté automatiquement comme « vente interdite ».
+
+## Responsive V1 — desktop, iPhone et Android
+
+La compatibilité mobile est une **exigence V1**, pas une amélioration ultérieure.
+
+La V1 doit être pleinement utilisable depuis :
+- desktop ;
+- tablette ;
+- Safari sur iPhone ;
+- Chrome sur Android.
+
+Il s'agit d'une application web responsive ; une application iOS/Android native n'est pas requise pour la V1.
+
+### Principes mobile
+
+- aucun scroll horizontal sur les écrans métier ;
+- aucune interaction essentielle dépend du hover ;
+- zones tactiles d'au moins 44 × 44 px ;
+- formulaires utilisables au pouce ;
+- bouton principal pleine largeur sur petit écran lorsque pertinent ;
+- support des safe areas iPhone ;
+- gestion correcte du clavier virtuel ;
+- textes et numéros réglementaires lisibles sans zoom ;
+- accordéons, boutons de copie et liens utilisables au toucher ;
+- navigation simplifiée, sans sidebar desktop écrasée sur mobile.
+
+### Adaptation de l'écran d'analyse
+
+Desktop :
+```text
+[ Identifiant ] [ Pays stock ] [ Marketplace ] [ Analyser ]
+```
+
+Mobile :
+```text
+Identifiant
+[........................]
+
+Pays du stock fournisseur
+[........................]
+
+Marketplace cible
+[........................]
+
+[      Analyser le produit      ]
+```
+
+### Adaptation de l'écran résultat
+
+Desktop :
+```text
+[ Emballages ] [ DEEE ] [ Batteries ]
+[ Ce qui est vérifié ] [ Point à vérifier ]
+```
+
+Mobile :
+```text
+[ Verdict ]
+
+[ Emballages ]
+[ DEEE ]
+[ Batteries ]
+
+[ Point à vérifier ]
+
+[ Ce qui est vérifié ]
+
+[ Preuves et sources ]
+[ Détails techniques ]
+```
+
+Le verdict et le point bloquant doivent rester visibles très tôt dans le scroll.
+
+### Navigation mobile
+
+Sur petit écran :
+- header compact ;
+- menu mobile ou navigation réduite ;
+- pas de sidebar permanente ;
+- actions secondaires regroupées dans un menu ;
+- action principale clairement accessible.
+
+### Breakpoints indicatifs
+
+- mobile compact : 320–479 px ;
+- mobile large : 480–767 px ;
+- tablette : 768–1023 px ;
+- desktop : ≥ 1024 px.
+
+Le design doit rester fluide entre les breakpoints ; il ne doit pas dépendre uniquement de largeurs fixes.
+
+### Compatibilité navigateur à tester
+
+Minimum V1 :
+- Safari iOS récent ;
+- Chrome Android récent ;
+- Chrome desktop récent ;
+- Safari desktop récent ;
+- Edge récent.
+
+### Tests responsive
+
+Prévoir des tests Playwright au minimum sur des profils équivalents à :
+- iPhone compact ;
+- iPhone récent grand format ;
+- Pixel / Android standard ;
+- tablette ;
+- desktop 1280 px ou plus.
+
+Critères :
+- pas de contenu coupé ;
+- pas de scroll horizontal ;
+- verdict visible et lisible ;
+- cartes filières correctement empilées ;
+- numéros copiables ;
+- accordéons utilisables ;
+- formulaire entièrement utilisable avec clavier tactile.
 
 ## Pas de route logistique dans l'écran V1
 
