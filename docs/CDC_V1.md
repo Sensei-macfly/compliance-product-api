@@ -2,133 +2,103 @@
 
 ## 1. Objectif
 
-Construire un moteur autonome de pré-validation REP/EPR permettant de répondre :
+Construire un moteur autonome de pré-validation REP/EPR qui répond, pour **un produit et un marché cible** :
 
-> **À partir des faits connus sur le produit, le sourcing, la marketplace cible et la configuration du client, quelles routes permettent de poursuivre la vente sans nouvel enregistrement REP/EPR/IDU de l'entité vendeuse ?**
+> **Peut-on démontrer qu'une couverture REP/EPR amont suffisante existe, de sorte que l'entité vendeuse n'ait pas à porter elle-même une nouvelle obligation REP/EPR pour les filières applicables ?**
 
-Le projet est une brique indépendante destinée à être testée seule puis intégrée à Solenda via API. Il ne doit pas devenir une plateforme de sourcing.
+L'objectif métier est d'identifier les cas où le vendeur peut s'appuyer légalement sur une couverture amont déjà existante. La V1 ne promet pas une absence absolue de coûts ou d'obligations annexes : elle vérifie la possibilité d'éviter une obligation REP propre au vendeur pour le scénario analysé.
 
-## 2. Principe produit
+## 2. Principe central
 
-Le client fournit des faits.
-Le moteur fournit les déductions.
+Le client fournit des **faits**. Le moteur produit les **déductions**.
 
-Ne pas demander au client de déclarer lui-même :
-- les pays où il « peut » stocker ;
-- les routes qu'il estime possibles ;
-- sa conformité REP supposée.
+Le moteur ne doit pas demander au client de deviner :
+- un pays FBA ;
+- une route logistique ;
+- un prep center ;
+- une conformité REP supposée.
 
-Le moteur doit utiliser les données disponibles pour générer des routes candidates raisonnables et produire un verdict.
+## 3. Entrées V1
 
-## 3. Deux modes d'utilisation
+### Analyse
 
-### Dashboard autonome
+Une requête analyse une seule marketplace cible.
 
-L'interface collecte les données minimales nécessaires.
+Entrées minimales :
+1. `identifier` : EAN / GTIN / UPC / ASIN ;
+2. `supplier_stock_country` : pays où le produit est **physiquement stocké chez le fournisseur au moment du sourcing** ;
+3. `target_marketplace` : FR / DE / IT / ES / GB.
 
-Cible V1 :
-1. identifiant produit : EAN / GTIN / UPC / ASIN ;
-2. pays de sourcing / pays réel du stock fournisseur ;
-3. marketplace cible.
+`supplier_stock_country` ne signifie pas :
+- pays de facturation ;
+- pays d'immatriculation du fournisseur ;
+- pays supposé d'expédition si le stock réel est ailleurs.
 
-Les autres informations viennent :
-- du profil client ;
-- des providers ;
-- ou d'une saisie complémentaire seulement lorsqu'elle est réellement nécessaire.
+### Profil client
 
-### Solenda via API
-
-Solenda appelle le même moteur et peut envoyer un payload enrichi contenant :
-- identifiant produit ;
-- marque / catégorie / ASIN ;
-- pays de sourcing / stock fournisseur ;
-- marketplace cible ;
-- fournisseur ;
-- configuration compte ;
-- données Amazon/FBA déjà disponibles.
-
-Le moteur ne doit jamais lire directement la base Solenda.
-
-## 4. Profil client
-
-Le profil persistant contient principalement :
+Faits persistants minimaux :
 - entité vendeuse ;
 - pays d'établissement ;
-- pays où le client dispose d'une immatriculation TVA ;
-- prep centers réellement disponibles ;
-- faits Amazon/FBA explicitement connus lorsqu'ils sont disponibles ;
-- immatriculations REP/EPR/IDU déjà détenues lorsqu'elles existent et sont disponibles.
+- pays d'immatriculation TVA si disponibles comme contexte.
 
-Les enregistrements REP/EPR déjà détenus par le client sont **facultatifs et non centraux dans l'UX V1**, mais le moteur doit pouvoir les exploiter pour déterminer qu'aucune **nouvelle** inscription n'est nécessaire lorsqu'une inscription propre est valide et applicable.
+Les immatriculations REP/EPR propres du vendeur ne constituent pas une voie favorable recherchée par la V1.
 
-Objectif principal : identifier les routes qui évitent une nouvelle immatriculation.
+## 4. Hors périmètre logistique V1
 
-## 5. Rôle de la TVA
+La V1 ne modélise pas :
+- prep centers ;
+- transit ;
+- route physique ;
+- pays de stockage FBA ;
+- redistribution du stock par Amazon ;
+- optimisation transport / coûts / délais.
 
-Les pays de TVA peuvent être utilisés comme information de routage ou de contrôle selon des règles documentées.
+Raison : au moment du sourcing et de l'achat, le pays de stockage FBA futur n'est généralement pas connu de manière fiable. Le moteur ne doit jamais l'inventer.
 
-Ils ne prouvent jamais :
-- la conformité REP/EPR ;
-- la couverture par un tiers ;
-- l'éligibilité FBA à eux seuls ;
-- le pays réel de stockage Amazon.
+## 5. Hypothèse produit V1
 
-## 6. Prep centers
+La V1 suppose :
+- produit revendu dans son état commercial d'origine ;
+- pas de bundle créé par le vendeur ;
+- pas de reconditionnement ;
+- pas de modification d'emballage susceptible de créer une nouvelle obligation.
 
-Les prep centers sont des faits logistiques persistants.
+Ces cas sont réservés à une V2.
 
-Ils servent à construire des routes candidates.
-Ils ne transfèrent pas une obligation REP/EPR et ne constituent pas une preuve de couverture.
+## 6. Amazon
 
-## 7. Marketplace cible
+Amazon est le canal de vente, pas une source de preuve juridique REP/EPR.
 
-La marketplace cible fait partie de l'analyse.
-
-Marchés pris en charge V1 :
-- FR
-- DE
-- IT
-- ES
-- GB
-
-En V1, **une requête `POST /api/v1/analyses` porte sur une seule marketplace cible** via `target_marketplace`. Pour analyser plusieurs marketplaces, le dashboard ou Solenda lance plusieurs analyses ; un endpoint batch pourra être ajouté plus tard sans modifier le moteur métier.
-
-## 8. Amazon
-
-Amazon SP-API est facultative.
-
-Le MVP doit fonctionner sans :
-- compte Amazon Professional ;
-- credentials SP-API ;
-- connexion Seller Central.
-
-Amazon peut enrichir :
+Amazon SP-API est facultative et peut uniquement enrichir :
 - ASIN ↔ GTIN ;
 - titre ;
 - marque ;
 - manufacturer ;
 - catégorie ;
-- product type ;
-- faits logistiques explicitement disponibles.
+- product type.
 
-Amazon n'est jamais une preuve juridique REP/EPR.
+La V1 ne dépend pas :
+- d'un compte Amazon Professional ;
+- des pays de stockage FBA ;
+- d'un shipment plan ;
+- d'une prédiction de redistribution Amazon.
 
-## 9. Pipeline
+## 7. Pipeline V1
 
 ```text
 Input facts
 → Product Resolution
 → Brand / Entity Resolution
 → EPR Classification
+→ Target-market Rules
 → Official Registry Matching
-→ Route Generation
-→ Country / Supply-chain Rules
-→ Internal State
+→ Upstream Coverage Assessment
+→ Stream Results
 → OUI / NON
-→ Reasons + Evidence
+→ French Explanation + Evidence
 ```
 
-## 10. Product Resolution
+## 8. Product Resolution
 
 Objet minimal :
 
@@ -147,9 +117,9 @@ Objet minimal :
 }
 ```
 
-Un identifiant produit ne suffit pas à établir toutes les caractéristiques réglementaires.
+Un identifiant produit ne suffit jamais, seul, à établir la responsabilité REP.
 
-## 11. Entity Resolution
+## 9. Entity Resolution
 
 Distinguer :
 - marque ;
@@ -162,127 +132,92 @@ Distinguer :
 - importateur ;
 - producteur REP enregistré.
 
-Une société apparentée ne doit jamais être automatiquement considérée comme l'entité REP responsable.
+Une société liée au groupe ne doit pas être considérée automatiquement comme l'entité couvrant le produit.
 
-## 12. Filières V1 et complétude
+## 10. Filières V1
 
-Univers minimal V1 :
+Univers minimal :
 - PACKAGING
 - EEE/WEEE
 - BATTERY
 
-Pour **chaque route candidate**, `streams[]` doit représenter **toutes les filières de l'univers V1**, même lorsqu'une filière est jugée non applicable ou que son applicabilité n'est pas résolue.
+Pour chaque analyse, `streams[]` doit représenter toutes les filières V1.
 
-Chaque entrée de filière porte un `applicability` interne :
-- `APPLICABLE` ;
-- `NOT_APPLICABLE` ;
-- `UNRESOLVED`.
+`applicability` :
+- `APPLICABLE`
+- `NOT_APPLICABLE`
+- `UNRESOLVED`
 
 Règles :
-- `APPLICABLE` : le verdict dépend des règles et preuves de la filière ;
-- `NOT_APPLICABLE` : la filière ne bloque pas la route ; le verdict est OUI avec un reason code explicite ;
-- `UNRESOLVED` : le verdict est obligatoirement NON ;
-- **une filière ne peut jamais être omise pour permettre un OUI**.
+- `APPLICABLE` : nécessite une couverture amont vérifiée pour obtenir OUI ;
+- `NOT_APPLICABLE` : ne bloque pas le verdict global ;
+- `UNRESOLVED` : force NON ;
+- aucune filière ne peut être omise pour produire un OUI.
 
-Le moteur conserve aussi un `stream_scope_state` au niveau de la route :
-- `COMPLETE` si le moteur a démontré que le périmètre de filières évalué est suffisant pour le produit et le marché ;
-- `UNRESOLVED` sinon.
+`stream_scope_state` :
+- `COMPLETE`
+- `UNRESOLVED`
 
-Une route ne peut être OUI que si `stream_scope_state = COMPLETE`.
+`UNRESOLVED` force le verdict global à NON.
 
-Le modèle reste extensible : l'ajout futur d'une filière étend l'univers évalué sans modifier ce principe de complétude.
+## 11. Couverture amont
 
-## 13. Sources
+Un numéro trouvé n'est jamais suffisant à lui seul.
 
-Priorité aux sources officielles/gratuites :
-- GS1 si accès exploitable ;
-- GLEIF ;
-- EUIPO ;
-- API Recherche Entreprises ;
-- INPI/RNE ;
-- Companies House ;
-- ADEME ;
-- LUCID/ZSVR ;
-- Stiftung EAR ;
-- GOV.UK EPR/WEEE ;
-- registres officiels Espagne ;
-- registres officiels Italie.
+Pour produire OUI sur une filière applicable, le moteur doit pouvoir démontrer, selon la règle du marché cible :
+- l'identité de l'entité amont pertinente ;
+- son rôle pertinent ;
+- le bon pays ;
+- la bonne filière / catégorie ;
+- la validité de l'enregistrement officiel ;
+- le lien avec la marque / le produit / la catégorie lorsque la règle l'exige ;
+- l'applicabilité de cette couverture à la vente analysée.
 
-Les providers payants ne doivent pas être indispensables en V1.
+La conclusion favorable recherchée est :
 
-## 14. Route Generator
+> **UPSTREAM_COVERAGE_VERIFIED**
 
-Le générateur utilise :
-- pays de stock fournisseur ;
-- marketplace cible ;
-- prep centers disponibles ;
-- faits Amazon/FBA explicitement connus ;
-- pays de TVA comme contexte uniquement lorsque pertinent ;
-- règles logistiques/réglementaires documentées.
+Une immatriculation propre du vendeur ne transforme pas à elle seule le résultat en OUI : ce n'est pas le scénario d'optimisation recherché par la V1.
 
-Il doit :
-- générer des routes candidates raisonnables ;
-- ne pas exiger que l'utilisateur choisisse lui-même la route ;
-- ne pas déduire un pays FBA depuis la seule TVA ;
-- ne pas produire toutes les permutations de pays ;
-- conserver les informations manquantes comme état interne UNVERIFIED ;
-- préserver distinctement le stock fournisseur, chaque segment de transit/prep, le stock FBA et la marketplace cible.
-
-Une route possède un `route_id` stable dans l'analyse et une liste ordonnée de `segments`.
-
-Types de segments V1 :
-- `SUPPLIER_STOCK` : stock physique chez le fournisseur ;
-- `TRANSIT` : passage logistique connu ou juridiquement pertinent sans prep center ;
-- `PREP_CENTER` : passage par un prep center réellement disponible ;
-- `FBA_INVENTORY` : pays de stockage/inventaire FBA connu ou à résoudre ;
-- `MARKETPLACE` : marché de vente cible.
-
-`TRANSIT` et `PREP_CENTER` peuvent apparaître zéro, une ou plusieurs fois. Le tableau `segments[]` donne l'ordre du parcours.
-
-Tout segment `PREP_CENTER` doit contenir un `prep_center_id` référençant un centre du profil client ; le pays seul ne suffit pas à identifier un centre disponible.
-
-Un transit de transporteur sans stockage ni effet sur la règle évaluée n'a pas besoin d'être inventé. En revanche, si un fait de transit est requis par une règle et reste inconnu, la route reste UNVERIFIED/NON.
-
-En V1, une route candidate représente un scénario de stockage FBA déterminé. Si plusieurs pays d'inventaire FBA sont possibles, le générateur produit des routes candidates distinctes afin de ne pas mélanger leurs effets réglementaires.
-
-## 15. Verdict
+## 12. Verdict
 
 Sortie utilisateur :
-- OUI
-- NON
+- **OUI**
+- **NON**
 
-États internes :
+États internes possibles :
 - VERIFIED
 - UNVERIFIED
 - NON_COMPLIANT
 - CONTRADICTORY
 
-OUI nécessite une chaîne de preuves suffisante.
+### OUI
 
-NON couvre tous les autres cas mais doit être expliqué.
+Pour une filière :
+- `NOT_APPLICABLE`, ou
+- `APPLICABLE` + couverture amont vérifiée.
 
-Un NON causé par UNVERIFIED signifie seulement que le moteur ne peut pas démontrer que la combinaison évaluée évite un nouvel enregistrement. Il ne constitue pas automatiquement une interdiction de vente, la preuve qu'une immatriculation est obligatoire, ni une conclusion juridique définitive.
+Pour l'analyse globale :
+- `stream_scope_state = COMPLETE` ;
+- toutes les filières V1 ont `verdict = OUI`.
+
+### NON
+
+NON signifie qu'une couverture suffisante n'est pas démontrée pour l'ensemble du scénario.
+
+NON ne signifie pas automatiquement :
+- vente interdite ;
+- inscription certaine obligatoire ;
+- non-conformité juridiquement établie.
 
 Principe :
 > **UNKNOWN ≠ COMPLIANT**
 
-## 16. Couverture amont
+## 13. Contrat API V1 de référence
 
-Un numéro REP/IDU d'une marque, d'un fabricant ou d'une société liée n'est jamais suffisant seul.
+Cette section est la **source normative unique** du contrat V1.
 
-Pour conclure favorablement, le moteur doit pouvoir établir, selon la règle applicable :
-- identité de l'entité ;
-- pays ;
-- filière/catégorie ;
-- validité de l'enregistrement ;
-- lien pertinent avec le produit / la catégorie ;
-- applicabilité à la route et au marché.
-
-## 17. API
-
-### POST /api/v1/analyses
-
-Payload minimal :
+### Requête minimale
 
 ```json
 {
@@ -292,7 +227,7 @@ Payload minimal :
 }
 ```
 
-Payload enrichi possible :
+### Requête enrichie
 
 ```json
 {
@@ -310,187 +245,124 @@ Payload enrichi possible :
   },
   "account_context": {
     "seller_country": "FR",
-    "vat_countries": ["FR", "DE"],
-    "prep_centers": [
-      {"id": "prep-fr-1", "country": "FR"}
-    ],
-    "existing_epr_registrations": [
-      {
-        "country": "DE",
-        "stream": "PACKAGING",
-        "registration_number": "OPTIONAL"
-      }
-    ]
+    "vat_countries": ["FR", "DE"]
   }
 }
 ```
-
-Les champs enrichis sont facultatifs.
-
-## 18. Contrat API V1 de référence
-
-Cette section est la **source normative unique** du contrat V1. Les autres documents décrivent l'architecture mais ne doivent pas maintenir un second schéma indépendant.
-
-### Requête
-
-Une requête analyse exactement **une marketplace cible**.
-
-```json
-{
-  "identifier": "8710103995426",
-  "supplier_stock_country": "IT",
-  "target_marketplace": "DE",
-  "account_context": {
-    "seller_country": "FR",
-    "vat_countries": ["FR", "DE"],
-    "prep_centers": [
-      {"id": "prep-fr-1", "country": "FR"}
-    ],
-    "existing_epr_registrations": []
-  }
-}
-```
-
-Les enrichissements produit, fournisseur et Amazon restent facultatifs.
 
 ### Réponse
-
-Valeurs utilisateur autorisées : `OUI` et `NON`.
 
 ```json
 {
   "analysis_id": "uuid",
+  "supplier_stock_country": "IT",
   "target_marketplace": "DE",
-  "overall_verdict": "OUI",
-  "routes": [
+  "overall_verdict": "NON",
+  "stream_scope_state": "COMPLETE",
+  "streams": [
     {
-      "route_id": "route-1",
-      "route_verdict": "OUI",
-      "stream_scope_state": "COMPLETE",
-      "segments": [
+      "stream": "PACKAGING",
+      "applicability": "APPLICABLE",
+      "verdict": "OUI",
+      "coverage_status": "UPSTREAM_VERIFIED",
+      "internal_state": "VERIFIED",
+      "registrations": [
         {
-          "segment_id": "seg-1",
-          "type": "SUPPLIER_STOCK",
-          "country": "IT"
-        },
-        {
-          "segment_id": "seg-2",
-          "type": "TRANSIT",
-          "country": "CH"
-        },
-        {
-          "segment_id": "seg-3",
-          "type": "PREP_CENTER",
-          "country": "FR",
-          "prep_center_id": "prep-fr-1"
-        },
-        {
-          "segment_id": "seg-4",
-          "type": "FBA_INVENTORY",
-          "country": "DE"
-        },
-        {
-          "segment_id": "seg-5",
-          "type": "MARKETPLACE",
-          "country": "DE"
+          "registration_type": "PACKAGING",
+          "registration_number": "DE123456789",
+          "holder": "Example GmbH",
+          "country": "DE",
+          "registry": "OFFICIAL_REGISTRY",
+          "registration_status": "VERIFIED",
+          "product_coverage_status": "VERIFIED"
         }
       ],
-      "streams": [
+      "reason_codes": ["UPSTREAM_COVERAGE_VERIFIED"],
+      "user_message_fr": "Couverture amont vérifiée pour les emballages.",
+      "evidence": []
+    },
+    {
+      "stream": "EEE/WEEE",
+      "applicability": "APPLICABLE",
+      "verdict": "NON",
+      "coverage_status": "UNPROVEN",
+      "internal_state": "UNVERIFIED",
+      "registrations": [
         {
-          "stream": "PACKAGING",
-          "applicability": "APPLICABLE",
-          "verdict": "OUI",
-          "internal_state": "VERIFIED",
-          "reason_codes": ["ALL_REQUIRED_STREAMS_VERIFIED"],
-          "missing_context": [],
-          "evidence": []
-        },
-        {
-          "stream": "EEE/WEEE",
-          "applicability": "APPLICABLE",
-          "verdict": "OUI",
-          "internal_state": "VERIFIED",
-          "reason_codes": ["UPSTREAM_COVERAGE_VERIFIED"],
-          "missing_context": [],
-          "evidence": []
-        },
-        {
-          "stream": "BATTERY",
-          "applicability": "NOT_APPLICABLE",
-          "verdict": "OUI",
-          "internal_state": "VERIFIED",
-          "reason_codes": ["STREAM_NOT_APPLICABLE"],
-          "missing_context": [],
-          "evidence": []
+          "registration_type": "WEEE",
+          "registration_number": "DE87654321",
+          "holder": "Example GmbH",
+          "country": "DE",
+          "registry": "OFFICIAL_REGISTRY",
+          "registration_status": "VERIFIED",
+          "product_coverage_status": "UNPROVEN"
         }
-      ]
+      ],
+      "reason_codes": ["REGISTRATION_FOUND_COVERAGE_UNPROVEN"],
+      "user_message_fr": "Un numéro officiel a été trouvé, mais sa couverture de ce produit n'est pas encore démontrée.",
+      "evidence": []
+    },
+    {
+      "stream": "BATTERY",
+      "applicability": "NOT_APPLICABLE",
+      "verdict": "OUI",
+      "coverage_status": "NOT_REQUIRED",
+      "internal_state": "VERIFIED",
+      "registrations": [],
+      "reason_codes": ["STREAM_NOT_APPLICABLE"],
+      "user_message_fr": "Cette filière n'est pas applicable au produit analysé.",
+      "evidence": []
     }
   ]
 }
 ```
 
-### Invariants de sécurité
+## 14. Invariants du contrat
 
-Pour chaque route :
-- `streams[]` contient toutes les filières de l'univers V1 ;
-- une filière `UNRESOLVED` a toujours `verdict = NON` ;
-- aucune filière ne peut être omise pour obtenir un OUI ;
-- `stream_scope_state = UNRESOLVED` force `route_verdict = NON`.
+- toutes les filières V1 figurent dans `streams[]` ;
+- une filière applicable n'est OUI que si sa couverture amont est vérifiée ;
+- un numéro peut être retourné même lorsque le verdict de la filière est NON ;
+- `registration_status = VERIFIED` ne signifie pas `product_coverage_status = VERIFIED` ;
+- une filière UNRESOLVED force NON ;
+- un scope de filières UNRESOLVED force NON ;
+- l'immatriculation propre du vendeur n'est pas utilisée comme raccourci pour produire OUI.
 
-### Agrégation
+## 15. Reason codes minimaux
 
-- filière `APPLICABLE` : OUI uniquement si elle est favorablement vérifiée ;
-- filière `NOT_APPLICABLE` : OUI uniquement comme absence de blocage pour cette filière, avec reason code explicite ;
-- filière `UNRESOLVED` : NON ;
-- `route_verdict = OUI` uniquement si le scope est COMPLETE et si **toutes** les entrées de `streams[]` ont `verdict = OUI` ;
-- `overall_verdict = OUI` si **au moins une route candidate** a `route_verdict = OUI`, sinon NON.
-
-Le verdict global signifie : **« au moins une route démontrée existe pour la marketplace demandée »**. Il ne signifie pas que toutes les routes sont favorables.
-
-`internal_state`, `applicability` et `stream_scope_state` sont des champs techniques d'audit/diagnostic. Ils ne constituent pas des décisions commerciales supplémentaires dans l'interface.
-
-Le même moteur et ce même contrat servent le dashboard autonome et Solenda.
-
-## 19. Reason codes minimaux
-
-- ALL_REQUIRED_STREAMS_VERIFIED
+Codes internes en anglais :
+- ALL_APPLICABLE_STREAMS_UPSTREAM_COVERED
 - STREAM_NOT_APPLICABLE
 - STREAM_APPLICABILITY_UNRESOLVED
 - EPR_STREAM_SCOPE_UNRESOLVED
-- NO_LOCAL_ENTITY_FOUND
-- EPR_REGISTRATION_NOT_FOUND
-- MULTIPLE_STREAMS_INCOMPLETE
-- CROSS_BORDER_COVERAGE_NOT_ESTABLISHED
-- PRODUCT_CLASSIFICATION_UNCERTAIN
-- ENTITY_RESOLUTION_FAILED
-- OFFICIAL_REGISTRY_UNAVAILABLE
-- INSUFFICIENT_OFFICIAL_EVIDENCE
-- PRODUCT_NOT_RESOLVED
 - UPSTREAM_COVERAGE_VERIFIED
 - UPSTREAM_COVERAGE_UNPROVEN
-- ROUTE_NOT_SUPPORTED
-- MARKET_RULE_NOT_VALIDATED
+- UPSTREAM_ENTITY_NOT_RESOLVED
+- REGISTRATION_NOT_FOUND
+- REGISTRATION_FOUND_COVERAGE_UNPROVEN
 - REGISTRATION_SCOPE_MISMATCH
-- REQUIRED_ROUTE_FACT_MISSING
+- PRODUCT_CLASSIFICATION_UNCERTAIN
+- PRODUCT_NOT_RESOLVED
+- OFFICIAL_REGISTRY_UNAVAILABLE
+- TARGET_MARKET_RULE_NOT_VALIDATED
+- SUPPLIER_STOCK_COUNTRY_UNCERTAIN
+- INSUFFICIENT_OFFICIAL_EVIDENCE
 
-## 20. Dashboard
+L'interface utilisateur affiche des explications en français et ne montre pas les codes bruts par défaut.
 
-Afficher :
-- produit ;
-- sourcing / stock fournisseur ;
-- marketplace cible ;
-- routes candidates ;
-- OUI/NON ;
-- motifs ;
-- filières ;
-- entités ;
-- numéros/enregistrements ;
-- preuves ;
-- limites.
+## 16. Dashboard
 
-Ne pas demander de configuration logistique détaillée à chaque analyse si elle existe déjà dans le profil.
+Le résultat doit montrer immédiatement :
+1. OUI / NON ;
+2. numéros REP/EPR/DEEE trouvés ;
+3. ce qui est vérifié ;
+4. ce qui bloque ou reste à vérifier ;
+5. les preuves et sources.
 
-## 21. Données
+Même sur un résultat NON, les éléments correctement vérifiés doivent rester visibles.
+
+Voir `docs/UX_V1.md`.
+
+## 17. Données principales
 
 PostgreSQL + Prisma.
 
@@ -498,8 +370,6 @@ Tables principales :
 - users
 - client_profiles
 - client_vat_countries
-- user_prep_centers
-- seller_epr_registrations
 - products
 - product_identifiers
 - brands
@@ -510,62 +380,70 @@ Tables principales :
 - epr_registrations
 - product_epr_classifications
 - analyses
-- candidate_routes
-- route_market_stream_results
+- analysis_stream_results
+- registry_matches
 - evidence
 
-## 22. Règles minimales
+Pas de tables V1 pour :
+- prep centers ;
+- routes logistiques ;
+- segments transit ;
+- stockage FBA.
 
-- filière obligatoire non vérifiée => NON ;
-- entité nécessaire non résolue => NON ;
-- registre indisponible sans cache récent => NON ;
-- numéro REP de marque seul => insuffisant ;
-- numéro d'un autre pays => insuffisant ;
-- achat dans un pays ≠ couverture automatique dans un autre ;
-- toutes les filières V1 doivent être représentées dans `streams[]` ;
-- applicabilité d'une filière non résolue => NON ;
-- périmètre global des filières non résolu => NON ;
-- une donnée de route manquante ne doit bloquer que si la règle évaluée en dépend.
+## 18. Règles minimales
 
-## 23. Hors périmètre V1
+- filière applicable non vérifiée => NON ;
+- applicabilité non résolue => NON ;
+- périmètre des filières non résolu => NON ;
+- entité amont nécessaire non résolue => NON ;
+- registre indisponible sans cache suffisamment récent => NON ;
+- numéro officiel trouvé seul => insuffisant ;
+- numéro d'un autre pays => insuffisant sauf règle explicitement documentée ;
+- achat / stock dans un pays ≠ couverture automatique dans le marché cible ;
+- une inscription propre du vendeur ≠ couverture amont favorable.
 
-Ne pas implémenter :
+## 19. Hors périmètre V1
+
 - plateforme de sourcing ;
 - comparaison fournisseurs ;
-- ROI ;
-- marge FBA ;
-- fiscalité complète ;
-- moteur logistique/TMS exhaustif ;
+- ROI / marge FBA ;
+- moteur logistique ;
+- prep centers ;
+- transit ;
+- pays de stockage FBA ;
+- bundles ;
+- reconditionnement ;
+- modification d'emballage ;
 - inscription REP automatisée ;
-- APIs commerciales obligatoires ;
+- fiscalité complète ;
 - avis juridique définitif.
 
-## 24. Critères d'acceptation
+## 20. Gate avant activation de vrais OUI
 
-### Gate mesurable avant activation de vrais OUI
+Pour chaque combinaison pays × filière × rôle activée :
+- corpus figé avant évaluation ;
+- 0 faux OUI sur le corpus ;
+- 100 % des OUI traçables jusqu'aux sources et à la version de règle ;
+- au moins 3 cas positifs indépendamment revus ;
+- au moins 3 cas négatifs ou ambigus ;
+- 100 % des cas positifs de référence reconnus comme OUI ;
+- source indisponible / preuve amont incomplète / applicabilité non résolue => NON/UNVERIFIED.
 
-Avant d'activer des OUI réels pour une combinaison pays × filière × rôle :
-- le corpus de référence correspondant doit être figé avant l'évaluation ;
-- **0 faux OUI** est toléré sur ce corpus ;
-- **100 % des OUI** doivent avoir une chaîne de preuve traçable jusqu'aux sources et à la version de règle utilisées ;
-- les cas de source indisponible, preuve amont incomplète et donnée FBA requise manquante doivent produire NON/UNVERIFIED ;
-- le corpus doit contenir, pour chaque combinaison pays × filière × rôle activée, **au moins 3 cas positifs indépendamment revus** et **au moins 3 cas négatifs ou ambigus** ; si ce minimum n'est pas disponible, les vrais OUI restent désactivés pour cette combinaison ;
-- le moteur doit retourner OUI sur **100 % des cas positifs de référence** du périmètre activé ; cela évite qu'un moteur retournant toujours NON puisse franchir le gate ;
-- les seuils et le corpus doivent être documentés avant leur utilisation, afin de ne pas être ajustés après observation des résultats.
+Ce minimum est acceptable pour un pilote limité, pas pour une validation à grande échelle. Le corpus devra être élargi avant extension du périmètre.
 
-La couverture fonctionnelle peut rester limitée en V1, mais un périmètre activé doit démontrer à la fois sa sécurité (pas de faux OUI) et son utilité (reconnaissance des cas positifs de référence).
+## 21. Critères d'acceptation V1
 
 La V1 est fonctionnelle si :
-1. elle accepte un identifiant produit ;
-2. elle accepte un pays de stock fournisseur ;
-3. elle accepte une marketplace cible ;
-4. elle exploite le profil client sans lui demander de deviner ses routes ;
-5. elle génère des routes candidates ;
-6. elle résout produit et entités ;
-7. elle classe les filières ;
-8. elle interroge/synchronise les sources officielles ;
-9. elle retourne OUI/NON avec motifs et preuves ;
-10. les champs enrichis Solenda restent optionnels ;
-11. le dashboard et Solenda utilisent le même moteur ;
-12. aucune connexion Amazon n'est obligatoire ;
-13. aucune API commerciale payante n'est indispensable.
+1. elle accepte identifiant + pays physique du stock fournisseur + marketplace cible ;
+2. elle fonctionne sans pays FBA ;
+3. elle fonctionne sans prep center ;
+4. elle résout produit et entités ;
+5. elle classe PACKAGING / EEE-WEEE / BATTERY ;
+6. elle recherche les enregistrements officiels du marché cible ;
+7. elle distingue numéro trouvé et couverture produit démontrée ;
+8. elle retourne tous les numéros pertinents trouvés, y compris lorsque le verdict global est NON ;
+9. elle produit OUI uniquement avec couverture amont démontrée pour toutes les filières applicables ;
+10. elle produit des explications utilisateur en français ;
+11. les codes techniques restent en anglais ;
+12. dashboard et Solenda utilisent le même moteur et le même contrat ;
+13. Amazon SP-API n'est pas obligatoire.
