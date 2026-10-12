@@ -216,29 +216,29 @@ Les champs enrichis sont facultatifs.
 
 ## Réponse
 
+Le contrat API canonique est défini dans `docs/CDC_V1.md` et doit rester identique ici.
+
 ```json
 {
   "analysis_id": "uuid",
-  "overall_verdict": "NON",
+  "overall_verdict": "OUI",
   "routes": [
     {
-      "supplier_stock_country": "IT",
-      "prep_country": "FR",
-      "fba_inventory_country": "DE",
+      "route_id": "route-1",
+      "route_verdict": "OUI",
+      "segments": [
+        {"type": "SUPPLIER_STOCK", "country": "IT"},
+        {"type": "PREP_CENTER", "country": "FR"},
+        {"type": "FBA_INVENTORY", "country": "DE"},
+        {"type": "MARKETPLACE", "country": "DE"}
+      ],
       "target_marketplace": "DE",
       "streams": [
         {
           "stream": "PACKAGING",
           "verdict": "OUI",
           "internal_state": "VERIFIED",
-          "reason_codes": ["ALL_REQUIRED_EVIDENCE_VERIFIED"],
-          "evidence": []
-        },
-        {
-          "stream": "EEE",
-          "verdict": "NON",
-          "internal_state": "UNVERIFIED",
-          "reason_codes": ["INSUFFICIENT_OFFICIAL_EVIDENCE"],
+          "reason_codes": ["ALL_REQUIRED_STREAMS_VERIFIED"],
           "missing_context": [],
           "evidence": []
         }
@@ -248,7 +248,14 @@ Les champs enrichis sont facultatifs.
 }
 ```
 
-Le verdict global est dérivé des résultats détaillés et n'est jamais leur substitut.
+Agrégation :
+- une filière est OUI uniquement si elle est favorablement vérifiée ;
+- une route est OUI uniquement si toutes ses filières applicables requises sont OUI ;
+- `overall_verdict` est OUI si au moins une route candidate possède `route_verdict = OUI`, sinon NON.
+
+Le verdict global signifie donc « au moins une route démontrée existe » et non « toutes les routes sont favorables ».
+
+`internal_state` est purement technique et ne doit pas apparaître comme une troisième décision commerciale dans l'interface utilisateur.
 
 ## Sémantique de NON
 
