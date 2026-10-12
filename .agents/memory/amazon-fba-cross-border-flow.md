@@ -43,3 +43,12 @@ UNKNOWN is never treated as compliant.
 A NON caused by missing evidence means the engine cannot prove that the route avoids a new registration. It does not automatically mean the sale is legally prohibited or that seller registration is definitively required.
 
 An upstream EPR/IDU number is never enough by itself to prove coverage of the seller, product/SKU, category, market or route.
+
+
+Additional V1 contract rules:
+- one analysis request targets one marketplace; multi-market analysis is orchestrated through multiple calls;
+- each candidate route uses ordered typed segments: SUPPLIER_STOCK, TRANSIT, PREP_CENTER, FBA_INVENTORY, MARKETPLACE;
+- PREP_CENTER segments must reference a real client-profile prep center by id;
+- every route must include all V1 EPR streams (PACKAGING, EEE/WEEE, BATTERY) with applicability APPLICABLE, NOT_APPLICABLE or UNRESOLVED;
+- any unresolved stream applicability or unresolved overall stream scope blocks OUI;
+- a route cannot become OUI by omitting an uncertain stream.
