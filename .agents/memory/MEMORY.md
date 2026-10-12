@@ -1,2 +1,2 @@
-- [Amazon FBA cross-border flow](amazon-fba-cross-border-flow.md) — assess seller, supplier, stock/transit, FBA inventory and target market as separate route facts; never assume upstream EPR coverage.
+- [V1 upstream coverage model](v1-upstream-coverage.md) — V1 analyses product + physical supplier-stock country + target marketplace; no prep/transit/FBA route model; OUI requires verified upstream coverage on every applicable stream.
 - [Collaboration workflow](collaboration-workflow.md) — treat main as the source of truth; sync and read project docs before new work; surface conflicts rather than silently overriding decisions.

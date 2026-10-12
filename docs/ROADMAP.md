@@ -2,43 +2,46 @@
 
 ## Objectif
 
-Valider le moteur REP/EPR comme brique indépendante avant intégration éventuelle à Solenda.
+Valider un moteur de couverture REP/EPR amont par produit et marché avant intégration à Solenda.
 
 ## Phase 0 — Spécification
 
-- [x] positionnement : module de compliance, pas plateforme de sourcing
-- [x] architecture API-first
-- [x] dashboard autonome + Solenda sur le même moteur
-- [x] Amazon optionnel
-- [x] décision utilisateur OUI/NON uniforme
-- [x] états internes conservateurs
-- [x] distinction produit / entité / registre / couverture
-- [x] profil client basé sur des faits
-- [x] suppression de la logique « le client déclare ses pays FBA possibles »
-- [x] REP/EPR déjà détenues facultatives mais supportées
-- [x] résultat détaillé par route × marché × filière
-- [ ] auditer toutes les sources officielles retenues
+- [x] API-first
+- [x] dashboard + Solenda sur le même moteur
+- [x] OUI/NON uniforme
+- [x] UNKNOWN ≠ COMPLIANT
+- [x] identifiant + stock fournisseur physique + marché cible + product_handling_mode explicite
+- [x] suppression des pays FBA devinés
+- [x] suppression du Route Generator V1
+- [x] suppression prep center / transit / stockage FBA du noyau V1
+- [x] bundles / repackaging repoussés en V2
+- [x] OUI applicable = couverture amont vérifiée
+- [x] immatriculation propre vendeur exclue comme chemin favorable V1
+- [x] UX : numéros visibles même sur NON
+- [x] messages utilisateur français / codes techniques anglais
+- [x] fail-closed si un fait réglementaire requis est absent ou hors périmètre V1
+- [x] UNKNOWN/absence de product_handling_mode interdit OUI
+- [x] APPLICABLE + OUI exige evidence[] non vide
+- [ ] auditer les sources officielles
 - [ ] valider les règles pays × filière × rôle
-- [ ] constituer un jeu de cas de référence indépendant
+- [ ] constituer le corpus de référence
 
-## Gate avant développement du moteur
+## Gate avant activation des vrais OUI
 
-Avant d'autoriser un OUI réel :
-- [ ] corpus de référence figé avant évaluation ;
-- [ ] 0 faux OUI sur ce corpus pour le périmètre activé ;
-- [ ] 100 % des OUI avec chaîne de preuve traçable ;
-- [ ] au moins 3 cas positifs indépendamment revus et 3 cas négatifs/ambigus par combinaison pays × filière × rôle activée ;
-- [ ] 100 % des cas positifs de référence reconnus comme OUI dans le périmètre activé ;
-- [ ] chaîne de preuve documentée ;
-- [ ] règle pays × filière × rôle documentée ;
-- [ ] données minimales nécessaires définies ;
-- [ ] comportement UNVERIFIED défini ;
-- [ ] corpus de test revu indépendamment ;
-- [ ] cas de données FBA inconnues couvert ;
-- [ ] cas de preuve amont incomplète couvert ;
-- [ ] cas de registre indisponible couvert ;
-- [ ] cas d'inscription propre existante couvert ;
-- [ ] cas multi-routes / multi-marchés / multi-filières couvert.
+Pour chaque combinaison pays × filière × rôle :
+- [ ] corpus figé avant évaluation
+- [ ] 0 faux OUI
+- [ ] 100 % des OUI traçables
+- [ ] aucune filière APPLICABLE avec OUI et evidence=[]
+- [ ] au moins 3 cas positifs indépendamment revus
+- [ ] au moins 3 cas négatifs/ambigus
+- [ ] 100 % des cas positifs reconnus
+- [ ] source indisponible => NON/UNVERIFIED
+- [ ] couverture amont incomplète => NON/UNVERIFIED
+- [ ] applicabilité filière non résolue => NON
+- [ ] fait réglementaire requis absent/hors scope => NON/UNVERIFIED
+- [ ] aucune hypothèse logistique favorable inventée pour produire OUI
+- [ ] violation connue de l'hypothèse produit V1 => NON/UNVERIFIED
 
 ## Phase 1 — Fondations
 
@@ -46,30 +49,28 @@ Avant d'autoriser un OUI réel :
 - [ ] PostgreSQL / Prisma
 - [ ] auth
 - [ ] isolation tenant
-- [ ] API /api/v1/analyses
-- [ ] modèle evidence
+- [ ] POST /api/v1/analyses
+- [ ] evidence model
 - [ ] provider abstraction
 - [ ] identifier validation
-- [ ] logs et observabilité
+- [ ] logs / observabilité
 
 ## Phase 2 — Profil client minimal
 
 - [ ] seller entity
 - [ ] country of establishment
-- [ ] VAT registration countries
-- [ ] available prep centers
-- [ ] optional Amazon/FBA facts explicitly known
-- [ ] optional existing seller EPR/REP/IDU registrations
+- [ ] VAT registration countries optionnels
 
 Ne pas demander :
-- liste déclarative de pays FBA « possibles »
-- routes construites manuellement
-- REP/EPR personnelles comme champ obligatoire de l'UX
+- prep centers
+- pays FBA
+- route construite
+- immatriculations REP propres comme chemin positif V1
 
 ## Phase 3 — Product & Entity Resolution
 
 - [ ] GTIN validation
-- [ ] GS1 adapter si accès exploitable
+- [ ] GS1 adapter si exploitable
 - [ ] GLEIF
 - [ ] EUIPO
 - [ ] France Entreprises / RNE
@@ -77,125 +78,117 @@ Ne pas demander :
 - [ ] entity normalization
 - [ ] corporate graph minimal
 
-Amazon SP-API : optionnelle.
+Amazon SP-API : optionnelle pour l'enrichissement produit.
 
 ## Phase 4 — Classification REP
 
 - [ ] PACKAGING
 - [ ] EEE/WEEE
 - [ ] BATTERY
+- [ ] applicability
+- [ ] stream_scope_state
 - [ ] tests
 
 ## Phase 5 — Registres
 
-Pilote end-to-end initial :
-1. **France / EEE via ADEME/SYDEREP**, pour valider le connecteur de preuve d'enregistrement et la chaîne evidence → règle → verdict, sans considérer l'IDU seul comme preuve de couverture produit/route.
+Pilote initial :
+1. **France / EEE via ADEME/SYDEREP** pour valider la chaîne registre → evidence → coverage assessment, sans considérer l'IDU seul comme preuve de couverture produit.
 
 Puis :
-2. autres filières France après validation de la chaîne de preuve
+2. autres filières France
 3. Allemagne
 4. Royaume-Uni
 5. Espagne
 6. Italie
 
-Pour chaque pays :
+Pour chaque source :
 - [ ] source officielle
 - [ ] ToS / automatisation
 - [ ] normalisation
-- [ ] cache/sync
+- [ ] cache / sync
 - [ ] evidence
 - [ ] tests
 
-## Phase 6 — Route Generator
+## Phase 6 — Upstream Coverage Engine
 
-Entrées :
-- stock fournisseur ;
-- marketplace cible ;
-- prep centers ;
-- faits Amazon/FBA explicites si disponibles ;
-- règles documentées.
-
-Le moteur :
-- [ ] génère les routes candidates raisonnables ;
-- [ ] distingue stock fournisseur, transit simple, prep center, stock FBA et marketplace ;
-- [ ] représente TRANSIT indépendamment d'un prep center ;
-- [ ] référence chaque prep center généré par un prep_center_id du profil ;
-- [ ] ne demande pas au client de construire la route ;
-- [ ] n'infère pas un pays FBA uniquement depuis la TVA ;
-- [ ] ne produit pas un produit cartésien arbitraire ;
-- [ ] marque UNVERIFIED les routes dont une donnée nécessaire manque.
-
-## Phase 7 — Compliance Engine
-
-- [ ] règles pays/filières/rôles
-- [ ] upstream coverage
-- [ ] existing seller registration assessment
-- [ ] local entity resolution
-- [ ] résultats par route × marché × filière
-- [ ] streams[] exhaustif sur PACKAGING / EEE-WEEE / BATTERY
-- [ ] applicability APPLICABLE / NOT_APPLICABLE / UNRESOLVED
-- [ ] stream_scope_state COMPLETE / UNRESOLVED
+- [ ] règles marché × filière × rôle
+- [ ] identification entité amont pertinente
+- [ ] registry matching
+- [ ] distinction registration verified / product coverage verified
+- [ ] UPSTREAM_VERIFIED
+- [ ] UPSTREAM_UNPROVEN
+- [ ] résultats marché × filière
 - [ ] OUI/NON
 - [ ] reason codes
-- [ ] missing_context
+- [ ] user_message_fr
 - [ ] evidence
-- [ ] aucune note/score visible
-- [ ] NON/UNVERIFIED ne doit pas être présenté comme interdiction ou obligation certaine
+- [ ] aucune note visible
 
-## Phase 8 — Dashboard autonome
+## Phase 7 — Dashboard autonome
 
-Champs d'analyse visés :
+Entrées :
 - [ ] identifier
-- [ ] supplier/source stock country
-- [ ] target marketplace
+- [ ] supplier_stock_country
+- [ ] target_marketplace
+- [ ] product_handling_mode via confirmation explicite non cochée par défaut
 
-Données complémentaires :
-- profil client ;
-- enrichissement providers ;
-- saisie complémentaire uniquement si réellement bloquante.
-
-Afficher :
-- [ ] produit
-- [ ] routes candidates
-- [ ] détail par marché et filière
+Afficher immédiatement :
 - [ ] OUI/NON
-- [ ] motifs
-- [ ] filières
-- [ ] entités
-- [ ] numéros
+- [ ] numéros officiels trouvés
+- [ ] titulaire / registre / pays
+- [ ] couverture produit vérifiée ou non
+- [ ] éléments validés
+- [ ] cause du NON ou point à vérifier
+- [ ] détail par filière
 - [ ] preuves
 - [ ] limites
 
-## Phase 9 — Intégration Solenda
+## Phase 8 — Intégration Solenda
 
-- [ ] même endpoint que le dashboard
+- [ ] même endpoint
 - [ ] payload enrichi facultatif
 - [ ] données produit/sourcing/marketplace réutilisées
-- [ ] contexte client transmis par Solenda
 - [ ] aucun accès direct à la DB Solenda
 - [ ] versioning API stable
 
+## V2 — explicitement hors V1
+
+- prep centers
+- transit à impact réglementaire
+- bundle
+- repackaging
+- modification d'emballage
+- règles dépendantes d'un pays de stockage FBA réellement connu
+- analyses post-envoi Amazon
+
 ## Validation MVP — cas minimaux
 
-- [ ] FBA inconnu
-- [ ] fournisseur / entité amont non résolu
-- [ ] REP amont présente mais lien produit non prouvé
+- [ ] produit non résolu
+- [ ] applicabilité filière incertaine
+- [ ] entité amont non résolue
+- [ ] numéro officiel non trouvé
+- [ ] numéro trouvé mais couverture produit non démontrée
 - [ ] registre indisponible
 - [ ] produit multi-filières
-- [ ] même GTIN vers plusieurs marchés
-- [ ] plusieurs routes vers un même marché
-- [ ] couverture amont valide
-- [ ] inscription propre déjà valide
-- [ ] preuve insuffisante
-- [ ] contradictions entre sources
+- [ ] couverture amont complète
+- [ ] contradiction entre sources
+- [ ] règle nécessitant un fait réglementaire hors scope/non disponible => NON
+- [ ] product_handling_mode absent => NON/UNVERIFIED
+- [ ] product_handling_mode UNKNOWN => NON/UNVERIFIED
+- [ ] product_handling_mode BUNDLED => NON/UNVERIFIED
+- [ ] product_handling_mode REPACKAGED => NON/UNVERIFIED
+- [ ] ORIGINAL_UNMODIFIED + preuves complètes => OUI possible
+- [ ] APPLICABLE + OUI + evidence=[] => réponse invalide / NON-UNVERIFIED
+- [ ] produit connu comme bundlé/reconditionné/modifié => NON/UNVERIFIED
+- [ ] même GTIN analysé sur plusieurs marchés via appels distincts
 
 ## Gate d'intégration
 
-Intégration possible si :
+Intégration si :
 - décisions explicables ;
 - règles auditées ;
 - preuves traçables ;
 - faux OUI maîtrisés ;
 - providers suffisamment stables ;
 - API autonome ;
-- dashboard et Solenda produisent le même résultat détaillé sur le même payload.
+- dashboard et Solenda produisent le même résultat sur le même payload.
