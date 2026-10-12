@@ -41,6 +41,24 @@ Preuves / sources
 Détails techniques
 ```
 
+## Confirmation de périmètre avant analyse
+
+L'écran d'analyse comporte **3 champs + 1 confirmation explicite** :
+
+- identifiant produit ;
+- pays du stock fournisseur ;
+- marketplace cible ;
+- confirmation :
+  > **Je confirme que le produit sera revendu tel que fourni, dans son emballage commercial d'origine, sans bundle ni reconditionnement.**
+
+Cette confirmation alimente `product_handling_mode = ORIGINAL_UNMODIFIED`.
+
+Règles UX :
+- case non cochée par défaut ;
+- aucune présélection implicite ;
+- si elle n'est pas confirmée, l'analyse peut expliquer le blocage mais ne peut pas produire OUI ;
+- si l'utilisateur indique bundle/reconditionnement/modification d'emballage, afficher que ce cas est hors périmètre V1 et retourner NON/UNVERIFIED.
+
 ## OUI
 
 Afficher immédiatement :
@@ -134,6 +152,8 @@ Exemples :
 | REGISTRATION_FOUND_COVERAGE_UNPROVEN | Un numéro officiel a été trouvé, mais sa couverture de ce produit n'est pas encore démontrée. |
 | REGISTRATION_SCOPE_MISMATCH | L'enregistrement trouvé ne correspond pas au périmètre nécessaire pour cette analyse. |
 | REGISTRATION_NOT_FOUND | Aucun enregistrement correspondant n'a été trouvé dans le registre officiel consulté. |
+| PRODUCT_HANDLING_UNCONFIRMED | Confirmez que le produit sera revendu tel que fourni, dans son emballage commercial d'origine, sans bundle ni reconditionnement. |
+| REQUIRED_EVIDENCE_MISSING | Les preuves nécessaires pour confirmer la couverture ne sont pas encore suffisantes. |
 
 Les codes anglais restent disponibles dans les détails techniques / API, pas dans l'interface normale.
 
@@ -177,7 +197,12 @@ Il s'agit d'une application web responsive ; une application iOS/Android native 
 
 Desktop :
 ```text
-[ Identifiant ] [ Pays stock ] [ Marketplace ] [ Analyser ]
+[ Identifiant ] [ Pays stock ] [ Marketplace ]
+
+[ ] Je confirme que le produit sera revendu tel que fourni,
+    dans son emballage d'origine, sans bundle ni reconditionnement.
+
+[ Analyser le produit ]
 ```
 
 Mobile :
@@ -190,6 +215,9 @@ Pays du stock fournisseur
 
 Marketplace cible
 [........................]
+
+[ ] Je confirme que le produit sera revendu tel que fourni,
+    dans son emballage d'origine, sans bundle ni reconditionnement.
 
 [      Analyser le produit      ]
 ```
