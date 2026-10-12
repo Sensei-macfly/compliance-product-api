@@ -1,1 +1,2 @@
 - [Amazon FBA cross-border flow](amazon-fba-cross-border-flow.md) — assess seller, supplier, stock/transit, FBA inventory and target market as separate route facts; never assume upstream EPR coverage.
+- [Collaboration workflow](collaboration-workflow.md) — treat main as the source of truth; sync and read project docs before new work; surface conflicts rather than silently overriding decisions.

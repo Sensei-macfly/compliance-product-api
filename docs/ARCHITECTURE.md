@@ -1,261 +1,254 @@
 # Architecture V1
 
-## Architecture produit
+## Principe
 
-Le MVP est **API-first / headless-first** : son dashboard et les applications clientes tierces appellent le même moteur avec des données enrichies. Les dossiers et configurations sont isolés par client/tenant ; Solenda pourra aussi l'intégrer ultérieurement.
+Le projet doit être conçu **API-first / headless-first**.
 
-## Pipeline
+Deux clients utilisent le même moteur :
 
 ```text
-EAN / GTIN / UPC / ASIN
+Dashboard autonome ─┐
+                    ├──> Compliance API ──> moteur métier
+Solenda ────────────┘
+```
+
+Aucune logique métier ne doit exister uniquement dans le dashboard.
+
+## Flux général
+
+```text
+Faits client
++
+Faits produit / sourcing / marketplace
         ↓
-Identifier Detection & Validation
+Normalisation & enrichissement
         ↓
 Product Resolution
         ↓
-Brand Resolution
-        ↓
-Entity Resolution Engine
-        ↓
-Corporate Graph
-        ↓
-Seller / supplier / claimed responsible entity resolution
-        ↓
-Client profile: VAT countries, available prep centers, FBA programs/countries
-        ↓
-Sourcing/stock options + requested target marketplaces
-        ↓
-Candidate Route Generator (supported transitions only; no hard-coded route)
+Entity Resolution
         ↓
 EPR Classification
-Product facts → filière and applicable categories
         ↓
 Official Registry Matching
         ↓
-Supply-chain / Country Rules
+Route Generator
         ↓
-Internal EPR_STATUS + registration assessment per route × target market × stream
+Country / Supply-chain Rules
         ↓
-Binary user decision: OUI / NON
+Résultats route × marché × filière
         ↓
-Plain-language explanation + auditable evidence
+OUI / NON
+        ↓
+Reasons + Evidence
 ```
 
-## Modules
+## Faits client
 
-### Product Resolution
-Normaliser l'identifiant et enrichir :
+Persistants :
+- seller entity ;
+- country of establishment ;
+- VAT registration countries ;
+- available prep centers ;
+- optional Amazon/FBA facts explicitly known ;
+- optional existing seller EPR/REP/IDU registrations.
+
+Important :
+- le profil décrit des faits ;
+- il ne contient pas une liste déclarative de pays « où je peux vendre/stocker » ;
+- le moteur produit cette conclusion ;
+- les immatriculations REP existantes sont facultatives, mais exploitables lorsqu'elles existent.
+
+## Faits transactionnels
+
+Par analyse :
+- identifier ;
+- sourcing / supplier stock country ;
+- target marketplace ;
+- optional supplier identity ;
+- optional enriched product attributes ;
+- optional Amazon/FBA facts from Solenda or providers.
+
+## Route Generator
+
+Le générateur produit des routes candidates raisonnables à partir des faits disponibles.
+
+Exemple conceptuel :
+
+```text
+Supplier stock IT
+→ Prep FR
+→ FBA DE
+→ Marketplace DE
+```
+
+Le générateur ne doit :
+- ni coder un trajet unique ;
+- ni générer un produit cartésien arbitraire de tous les pays ;
+- ni exiger que le client construise lui-même la route.
+
+Le modèle préserve distinctement :
+- supplier stock ;
+- transit simple ;
+- prep center ;
+- FBA inventory country ;
+- target marketplace.
+
+Types de segments V1 :
+- `SUPPLIER_STOCK`
+- `TRANSIT`
+- `PREP_CENTER`
+- `FBA_INVENTORY`
+- `MARKETPLACE`
+
+Les segments sont ordonnés. `TRANSIT` et `PREP_CENTER` peuvent être répétés. Un segment `PREP_CENTER` doit référencer un `prep_center_id` du profil client, pas seulement un pays.
+
+Une route peut être partielle si certains faits sont inconnus. Dans ce cas, le moteur conserve l'état interne UNVERIFIED et retourne NON à l'utilisateur si l'information manquante est nécessaire à la décision.
+
+## Product Resolution
+
+Entrée :
+- EAN / GTIN / UPC / ASIN.
+
+Sortie possible :
 - GTIN ;
-- ASIN si connu ;
-- titre ;
-- marque ;
-- fabricant ;
-- catégorie ;
-- product type ;
-- image éventuelle.
+- ASIN ;
+- title ;
+- brand ;
+- manufacturer ;
+- category ;
+- product_type ;
+- image_url.
 
-Un GTIN/ASIN ne décrit pas nécessairement les composants d'emballage, une batterie intégrée, un lot ou une variante de marché. Collecter ou vérifier les attributs nécessaires à chaque classification ; sinon retourner UNVERIFIED.
+Amazon SP-API reste un provider optionnel.
 
-Les sources Amazon sont optionnelles.
+## Entity Resolution
 
-### Entity Resolution
 Distinguer :
-- marque ;
-- propriétaire de marque ;
-- titulaire GTIN ;
-- fabricant ;
-- société mère ;
-- filiale locale ;
-- distributeur ;
-- importateur ;
-- producteur REP enregistré.
+- brand ;
+- trademark owner ;
+- GTIN licensee ;
+- manufacturer ;
+- parent group ;
+- local entity ;
+- distributor ;
+- importer ;
+- EPR registered producer.
 
-### Corporate Graph
-Relations prévues :
-- BRAND_OWNED_BY
-- GTIN_LICENSED_TO
-- MANUFACTURED_BY
-- SUBSIDIARY_OF
-- PARENT_OF
-- DISTRIBUTED_BY
-- LOCAL_ENTITY_OF
-- REGISTERED_EPR_AS
+## EPR Classification
 
-Chaque relation conserve sa source et sa date de vérification.
-
-Ajouter une relation entre l'entité qui doit remplir l'obligation et le parcours produit/commercial évalué. Ne pas déduire cette relation de la seule marque, du propriétaire du GTIN ou d'une société du même groupe.
-
-Modéliser séparément l'entité vendeuse du client, le fournisseur/grossiste, l'opérateur du prep center, Amazon comme place de marché/fulfillment, et l'entité amont prétendue responsable. Une déclaration d'IDU ne suffit pas : conserver la preuve qui relie l'entité amont au client, au produit/SKU, à la filière/catégorie et au marché concerné.
-
-### Candidate Route Generator
-
-Générer les routes candidates à partir des sources/lieux de stock, du profil client, du produit, des prep centers disponibles, des contraintes FBA et des marketplaces demandées. Ne pas coder de route fixe ni énumérer des permutations sans transitions logistiques étayées. Les pays TVA peuvent être des contraintes d'entrée uniquement lorsqu'une règle de routage l'établit ; ils ne prouvent ni l'éligibilité FBA ni la conformité REP/EPR. Si le programme ou les pays d'inventaire FBA ne sont pas connus, ne pas les déduire du marché cible : garder la route en NON avec état interne UNVERIFIED.
-
-### EPR Classification
-Minimum V1 :
+Univers minimum V1 :
 - PACKAGING
-- EEE
+- EEE/WEEE
 - BATTERY
 
-Prévoir une architecture extensible pour d'autres filières sans les implémenter dans la V1.
+Pour chaque route, toutes les filières de cet univers sont représentées dans `streams[]` avec un état d'applicabilité :
+- APPLICABLE
+- NOT_APPLICABLE
+- UNRESOLVED
 
-### Compliance Engine
-Entrée minimale à valider pour chaque parcours :
-```json
-{
-  "identifier": "8710103995426",
-  "client_configuration": {
-    "seller_entity_id": "...",
-    "existing_epr_evidence_ids": ["..."],
-    "vat_registration_countries": ["FR", "DE"],
-    "available_prep_centers": [
-      {"id": "prep-1", "country": "FR", "eligible_product_types": ["..."]}
-    ],
-    "amazon_fulfillment_profiles": [
-      {"program": "...", "eligible_inventory_countries": ["FR", "DE"]}
-    ],
-    "supported_logistics_transitions": [
-      {"from_stock_country": "DE", "via_prep_center_id": "prep-1", "to_fba_country": "FR"}
-    ]
-  },
-  "sourcing_options": [
-    {
-      "supplier_entity_id": "...",
-      "supplier_establishment_country": "DE",
-      "available_stock_countries": ["DE", "PL"]
-    }
-  ],
-  "target_markets": ["FR", "DE", "IT", "ES", "GB"],
-  "product_facts": {
-    "category_attributes": {},
-    "packaging_attributes": {},
-    "embedded_battery": null
-  },
-  "upstream_claims": [
-    {
-      "claimed_responsible_entity_id": "...",
-      "product_or_sku_scope": "...",
-      "stream": "EEE",
-      "evidence_ids": ["..."]
-    }
-  ]
-}
+Une filière UNRESOLVED force NON. Le moteur conserve aussi un `stream_scope_state` au niveau de la route ; si le périmètre global des filières n'est pas démontré complet, la route ne peut pas être OUI.
+
+L'architecture doit être extensible.
+
+## Compliance Engine
+
+Le moteur évalue, **par route × marché cible × filière** :
+- filière applicable ;
+- entité potentiellement responsable ;
+- enregistrement officiel ;
+- éventuelle inscription propre déjà valide du vendeur ;
+- applicabilité de la couverture amont ;
+- route physique connue ou déduite ;
+- qualité et fraîcheur des preuves.
+
+États internes :
+- VERIFIED
+- UNVERIFIED
+- NON_COMPLIANT
+- CONTRADICTORY
+
+Sortie utilisateur :
+- OUI
+- NON
+
+Un verdict global peut exister comme agrégat, mais ne remplace jamais les résultats détaillés.
+
+## API
+
+### Endpoint principal
+
+```http
+POST /api/v1/analyses
 ```
 
-Sortie :
-```json
-{
-  "route_id": "...",
-  "target_market": "FR",
-  "decision": "NON",
-  "explanation": "Les preuves disponibles ne démontrent pas que la route peut être poursuivie sans nouvel enregistrement.",
-  "internal": {
-    "epr_status": "UNVERIFIED",
-    "registration_assessment": {
-      "outcome": "UNRESOLVED",
-      "entity_to_register": null,
-      "responsible_entity_id": null,
-      "evidence_ids": []
-    },
-    "action": "HOLD",
-    "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE"
-  },
-  "scope": {
-    "supplier_stock_country": "DE",
-    "prep_center_countries": ["FR"],
-    "fba_inventory_countries": ["FR"],
-    "stream": "EEE",
-    "rule_version": "...",
-    "evaluated_at": "..."
-  },
-  "summary": "..."
-}
-```
+En V1, une requête porte sur **une seule marketplace cible**. Le dashboard ou Solenda répète l'appel pour plusieurs marketplaces ; un batch pourra être ajouté ultérieurement.
 
-États internes possibles de `epr_status` : `VERIFIED`, `NON_COMPLIANT`, `UNVERIFIED`, `CONFLICT`. L'interface ne montre que `decision: OUI | NON` : OUI seulement si l'état interne est VERIFIED et la situation d'inscription est favorablement établie ; NON dans tous les autres cas. `HOLD` et les états détaillés restent internes. Un NON fondé sur une incertitude ne signifie ni interdiction juridique ni preuve qu'une inscription propre est obligatoire. Ne pas exposer `sell_allowed` ou `stock_allowed` comme conclusions générales sans couvrir les règles correspondantes.
+Le **contrat normatif unique** de requête et de réponse est défini dans `docs/CDC_V1.md`, section « Contrat API V1 de référence ». Ce document d'architecture ne maintient pas un second schéma JSON afin d'éviter toute divergence documentaire.
 
-`internal.registration_assessment.outcome` répond en interne à la question métier : `SELLER_REGISTRATION_MISSING`, `SELLER_REGISTRATION_VERIFIED`, `UPSTREAM_COVERAGE_VERIFIED`, `NO_SELLER_REGISTRATION_REQUIRED` ou `UNRESOLVED`. Retourner l'entité et les preuves justifiant l'issue ; afficher une explication en langage clair, sans transformer ces états en décisions visibles supplémentaires. Ne pas déclarer `UPSTREAM_COVERAGE_VERIFIED` sans règle de marché vérifiée et lien documenté avec le produit/parcours.
+Invariants d'architecture :
+- toutes les filières V1 sont présentes dans `streams[]` pour chaque route ;
+- une applicabilité UNRESOLVED empêche un OUI ;
+- un `stream_scope_state` UNRESOLVED empêche un OUI ;
+- les routes utilisent des segments ordonnés et typés ;
+- un prep center généré référence un centre réellement disponible via `prep_center_id` ;
+- un transit sans prep center peut être représenté par `TRANSIT` ;
+- un scénario de stockage FBA distinct produit une route candidate distincte ;
+- `internal_state`, `applicability` et `stream_scope_state` restent techniques ;
+- `overall_verdict = OUI` signifie qu'au moins une route complète est favorable pour la marketplace demandée.
 
-## Règles minimales
+## Sémantique de NON
 
-- filière ou catégorie non vérifiée => UNVERIFIED ;
-- entité ou rôle dans le parcours non résolu => UNVERIFIED ;
-- registre indisponible sans cache à la fraîcheur définie => UNVERIFIED ;
-- une marque enregistrée ne suffit pas à prouver la couverture ;
-- un numéro d'un autre pays ne vaut pas couverture locale ;
-- l'achat dans un pays ne prouve pas la conformité du pays de destination ;
-- UNKNOWN ≠ COMPLIANT.
-- une absence dans le registre n'est NON_COMPLIANT que si l'exhaustivité, l'actualité de la source et l'identité de l'entité ont été établies ; sinon UNVERIFIED.
-- un IDU officiel prouve l'enregistrement de l'entité pour une filière donnée, mais ne lie pas à lui seul cet enregistrement à un GTIN, un vendeur ou un contrat.
-- un changement de prep center, de pays de stock FBA, de programme FBA ou de marché cible crée un contexte d'analyse distinct ;
-- un pays d'inventaire FBA manquant ou un programme non renseigné => UNVERIFIED si pertinent pour la règle évaluée ;
-- une inscription amont n'est pas une dérogation automatique pour le vendeur ; le moteur doit appliquer la règle du marché et vérifier le lien fournisseur-produit.
+Un NON dû à UNVERIFIED signifie :
+> le moteur ne peut pas démontrer que cette combinaison route × marché × filière évite un nouvel enregistrement.
+
+Cela ne constitue pas automatiquement :
+- une interdiction de vente ;
+- une preuve qu'une immatriculation est obligatoire ;
+- une conclusion juridique définitive.
+
+## Multi-tenant
+
+Le tenant vient du contexte d'authentification.
+Ne jamais faire confiance à un tenant_id libre fourni dans le body.
 
 ## Persistance
 
 PostgreSQL.
-
-Toutes les données client, options de sourcing, configurations logistiques, routes générées, analyses et preuves doivent être isolées par tenant. Résoudre le tenant depuis l'authentification et appliquer le contrôle d'accès côté API et persistance.
 
 Entités principales :
 - users
 - client_profiles
 - client_vat_countries
 - user_prep_centers
-- client_fba_profiles
-- seller_profiles
-- supplier_profiles
-- sourcing_options
-- supply_routes
-- route_segments
-- candidate_routes
+- seller_epr_registrations
 - products
 - product_identifiers
 - brands
 - entities
 - entity_aliases
 - entity_relationships
-- brand_entity_relationships
 - epr_streams
 - epr_registrations
 - product_epr_classifications
 - analyses
+- candidate_routes
 - route_market_stream_results
-- registration_assessments
 - evidence
+
+Ne pas créer en V1 un modèle de données excessivement détaillé pour des notions FBA non encore nécessaires au moteur.
 
 ## Cache
 
-Réutiliser les résolutions existantes :
-- GTIN → product
-- ASIN → product
+- identifier → product
 - brand → entity graph
-- entity + country + stream + category → EPR registration
-- seller + product + actual route + target market + stream + rule version → analysis result
+- entity + country + stream → EPR registration
+- normalized route facts → result, avec invalidation par version de règle/source
 
-Les routes candidates sont générées depuis les données d'un client et des transitions logistiques/FBA étayées, pas à partir d'une route codée en dur ni d'un produit cartésien de pays. Un changement de profil, de source, de prep center ou de configuration FBA invalide les résultats générés. Si une marketplace demandée n'a pas de règle validée, produire NON et conserver UNVERIFIED en interne plutôt que de la retirer de la matrice.
-
-## Synchronisation
-
-Préférer les imports bulk officiels lorsqu'ils existent. Pour le candidat France / EEE, l'ADEME fournit une API publique et un export complet actualisé quotidiennement ; faire une synchronisation locale plutôt qu'un appel au registre par analyse :
-
-```text
-Official Registry
-      ↓
-Scheduled Sync
-      ↓
-Normalizer
-      ↓
-PostgreSQL
-      ↓
-Fast Local Lookup
-```
-
-## Stack recommandée
+## Stack
 
 - Next.js
-- React
 - TypeScript
+- React
 - Tailwind
 - shadcn/ui
 - PostgreSQL
@@ -264,4 +257,4 @@ Fast Local Lookup
 - Vitest
 - Playwright
 
-Éviter les microservices en V1.
+Pas de microservices en V1.

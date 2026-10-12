@@ -2,147 +2,200 @@
 
 ## Objectif
 
-Valider séparément la faisabilité technique et réglementaire du moteur REP/EPR avant toute intégration à Solenda.
+Valider le moteur REP/EPR comme brique indépendante avant intégration éventuelle à Solenda.
 
 ## Phase 0 — Spécification
 
-- [x] positionnement MVP autonome
-- [x] confirmer le modèle de départ : le créateur vend sur Amazon et utilise FBA ; l'outil doit évaluer plusieurs clients
-- [x] distinguer fournisseur, stockage initial, prep center, stock FBA et marché cible
-- [ ] spécifier la génération dynamique des routes à partir du profil client, des sources, du produit, des prep centers, de FBA et des marketplaces demandées
-- [ ] définir les sources des contraintes opérationnelles FBA et des transitions logistiques ; ne pas les déduire des pays de TVA
-- [ ] définir les données d'entité, preuves et contraintes transmises par le client ou une application tierce
-- [x] définir les états VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE
-- [x] définir le standard provisoire d'une preuve positive et les conditions d'une absence concluante
-- [x] UX proposée à deux champs, mais non suffisante pour établir seule un résultat REP/EPR
+- [x] positionnement : module de compliance, pas plateforme de sourcing
+- [x] architecture API-first
+- [x] dashboard autonome + Solenda sur le même moteur
 - [x] Amazon optionnel
-- [x] APIs gratuites/officielles en priorité
-- [x] vérifier une source candidate pour le pilote : API publique ADEME/SYDEREP France / EEE
-- [ ] auditer les règles d'utilisation, la sémantique des champs et les limites de toutes les sources retenues
-- [ ] shortlist de bibliothèques GitHub réellement utiles
-- [ ] constituer un jeu de référence indépendant et fixer les critères de lancement avant évaluation
+- [x] décision utilisateur OUI/NON uniforme
+- [x] états internes conservateurs
+- [x] distinction produit / entité / registre / couverture
+- [x] profil client basé sur des faits
+- [x] suppression de la logique « le client déclare ses pays FBA possibles »
+- [x] REP/EPR déjà détenues facultatives mais supportées
+- [x] résultat détaillé par route × marché × filière
+- [ ] auditer toutes les sources officielles retenues
+- [ ] valider les règles pays × filière × rôle
+- [ ] constituer un jeu de cas de référence indépendant
 
-### Gate avant développement du moteur
+## Gate avant développement du moteur
 
-- [ ] valider le générateur sur des jeux de cas multi-client représentant différentes sources, prep centers, profils FBA et marketplaces, sans route codée en dur ;
-- [ ] faire valider par une personne compétente les règles REP/EPR des marchés et rôles effectivement pris en charge ;
-- [ ] produire une chaîne de preuves de bout en bout ; l'IDU ADEME seul ne relie pas une société au produit/GTIN ni à l'entité vendeuse du client ;
-- [ ] décrire la stratégie de synchronisation, l'attribution de la source, la fraîcheur et les cas d'indisponibilité ;
-- [ ] définir les mesures de fiabilité positive, de couverture et de résultats indéterminés sur des cas de référence tenus à l'écart des règles.
-
-Si cette gate échoue, ne jamais produire OUI à partir d'une route ou d'une preuve supposée ; retourner NON avec une explication, sans prétendre qu'une obligation légale ou une interdiction est établie.
+Avant d'autoriser un OUI réel :
+- [ ] corpus de référence figé avant évaluation ;
+- [ ] 0 faux OUI sur ce corpus pour le périmètre activé ;
+- [ ] 100 % des OUI avec chaîne de preuve traçable ;
+- [ ] au moins 3 cas positifs indépendamment revus et 3 cas négatifs/ambigus par combinaison pays × filière × rôle activée ;
+- [ ] 100 % des cas positifs de référence reconnus comme OUI dans le périmètre activé ;
+- [ ] chaîne de preuve documentée ;
+- [ ] règle pays × filière × rôle documentée ;
+- [ ] données minimales nécessaires définies ;
+- [ ] comportement UNVERIFIED défini ;
+- [ ] corpus de test revu indépendamment ;
+- [ ] cas de données FBA inconnues couvert ;
+- [ ] cas de preuve amont incomplète couvert ;
+- [ ] cas de registre indisponible couvert ;
+- [ ] cas d'inscription propre existante couvert ;
+- [ ] cas multi-routes / multi-marchés / multi-filières couvert.
 
 ## Phase 1 — Fondations
 
-- [ ] créer un générateur de routes multi-étapes depuis les options de sourcing/stock, le profil client, les prep centers disponibles, les contraintes FBA et les marketplaces demandées ;
-- [ ] produire un résultat par route générée × marché cible × filière ; afficher NON pour toute combinaison dont les règles ou sources ne sont pas auditées, tout en conservant NON VÉRIFIÉ en interne ;
-- [ ] commencer la vérification de source par l'ADEME France / EEE, sans présenter ce connecteur comme un parcours end-to-end validé ;
 - [ ] Next.js / TypeScript
 - [ ] PostgreSQL / Prisma
-- [ ] schéma de données
-- [ ] auth simple
-- [ ] isolation tenant pour profils, routes, analyses et preuves
-- [ ] validation identifiants EAN/GTIN/UPC/ASIN
-- [ ] système de providers
-- [ ] audit logging / evidence model
+- [ ] auth
+- [ ] isolation tenant
+- [ ] API /api/v1/analyses
+- [ ] modèle evidence
+- [ ] provider abstraction
+- [ ] identifier validation
+- [ ] logs et observabilité
 
-## Phase 2 — Product & Entity Resolution
+## Phase 2 — Profil client minimal
+
+- [ ] seller entity
+- [ ] country of establishment
+- [ ] VAT registration countries
+- [ ] available prep centers
+- [ ] optional Amazon/FBA facts explicitly known
+- [ ] optional existing seller EPR/REP/IDU registrations
+
+Ne pas demander :
+- liste déclarative de pays FBA « possibles »
+- routes construites manuellement
+- REP/EPR personnelles comme champ obligatoire de l'UX
+
+## Phase 3 — Product & Entity Resolution
 
 - [ ] GTIN validation
-- [ ] GS1 adapter si accès disponible
-- [ ] GLEIF adapter
-- [ ] EUIPO adapter
-- [ ] France Entreprises/RNE adapter
-- [ ] Companies House adapter
-- [ ] entity normalization / aliasing
+- [ ] GS1 adapter si accès exploitable
+- [ ] GLEIF
+- [ ] EUIPO
+- [ ] France Entreprises / RNE
+- [ ] Companies House
+- [ ] entity normalization
 - [ ] corporate graph minimal
 
-Amazon SP-API : **optionnelle**, hors chemin critique.
+Amazon SP-API : optionnelle.
 
-## Phase 3 — Classification REP
+## Phase 4 — Classification REP
 
 - [ ] PACKAGING
 - [ ] EEE/WEEE
 - [ ] BATTERY
-- [ ] tests de classification
+- [ ] tests
 
-## Phase 4 — Registres prioritaires
+## Phase 5 — Registres
 
-Ordre recommandé pour les sources :
-1. France / EEE (connecteur de preuve d'enregistrement)
-2. autres filières France après validation de la chaîne de preuves
+Pilote end-to-end initial :
+1. **France / EEE via ADEME/SYDEREP**, pour valider le connecteur de preuve d'enregistrement et la chaîne evidence → règle → verdict, sans considérer l'IDU seul comme preuve de couverture produit/route.
+
+Puis :
+2. autres filières France après validation de la chaîne de preuve
 3. Allemagne
 4. Royaume-Uni
 5. Espagne
 6. Italie
 
-L'analyse juridique et les tests doivent être définis par marché cible × filière × rôle du vendeur, avec les pays fournisseurs/stock et le parcours FBA comme contexte. La couverture d'un seul registre ne permet pas d'affirmer que les autres combinaisons sont vérifiées.
-
 Pour chaque pays :
-- [ ] provider officiel
+- [ ] source officielle
+- [ ] ToS / automatisation
 - [ ] normalisation
-- [ ] cache local
+- [ ] cache/sync
 - [ ] evidence
 - [ ] tests
+
+## Phase 6 — Route Generator
+
+Entrées :
+- stock fournisseur ;
+- marketplace cible ;
+- prep centers ;
+- faits Amazon/FBA explicites si disponibles ;
+- règles documentées.
+
+Le moteur :
+- [ ] génère les routes candidates raisonnables ;
+- [ ] distingue stock fournisseur, transit simple, prep center, stock FBA et marketplace ;
+- [ ] représente TRANSIT indépendamment d'un prep center ;
+- [ ] référence chaque prep center généré par un prep_center_id du profil ;
+- [ ] ne demande pas au client de construire la route ;
+- [ ] n'infère pas un pays FBA uniquement depuis la TVA ;
+- [ ] ne produit pas un produit cartésien arbitraire ;
+- [ ] marque UNVERIFIED les routes dont une donnée nécessaire manque.
+
+## Phase 7 — Compliance Engine
+
+- [ ] règles pays/filières/rôles
+- [ ] upstream coverage
+- [ ] existing seller registration assessment
+- [ ] local entity resolution
+- [ ] résultats par route × marché × filière
+- [ ] streams[] exhaustif sur PACKAGING / EEE-WEEE / BATTERY
+- [ ] applicability APPLICABLE / NOT_APPLICABLE / UNRESOLVED
+- [ ] stream_scope_state COMPLETE / UNRESOLVED
+- [ ] OUI/NON
 - [ ] reason codes
+- [ ] missing_context
+- [ ] evidence
+- [ ] aucune note/score visible
+- [ ] NON/UNVERIFIED ne doit pas être présenté comme interdiction ou obligation certaine
 
-## Phase 5 — Compliance Engine
+## Phase 8 — Dashboard autonome
 
-- [ ] règles pays/filières
-- [ ] conserver VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE comme états internes
-- [ ] afficher seulement OUI / NON et expliquer pourquoi un NON peut être dû à une preuve manquante, sans conclure à une interdiction
-- [ ] décision d'inscription : requise/absente, société déjà enregistrée, couverture amont vérifiée, non requise, ou indéterminée
-- [ ] action HOLD distincte d'une conclusion sur le droit général de vendre
-- [ ] reason codes
-- [ ] comportement fail-safe
-- [ ] aucun score visible
+Champs d'analyse visés :
+- [ ] identifier
+- [ ] supplier/source stock country
+- [ ] target marketplace
 
-## Phase 6 — Dashboard de test
+Données complémentaires :
+- profil client ;
+- enrichissement providers ;
+- saisie complémentaire uniquement si réellement bloquante.
 
-- [ ] champ identifiant
-- [ ] fournisseur et pays d'établissement
-- [ ] pays de stock initial et pays des prep centers
-- [ ] programme FBA et pays d'inventaire connus
-- [ ] fiche produit
-- [ ] matrice de toutes les routes candidates générées × marchés cibles demandés
-- [ ] routes/règles non prises en charge affichées NON, avec explication claire et état technique conservé en interne
-- [ ] configuration multi-client : pays TVA, prep centers disponibles, transitions logistiques, programmes et pays FBA permis/connus
-- [ ] API directe pour que des applications tierces envoient des données enrichies au même moteur
-- [ ] raisons et preuves associées à chaque décision OUI / NON
-- [ ] entité qui devrait s'enregistrer et preuves de couverture amont
-- [ ] obligations détectées
-- [ ] entités et numéros
-- [ ] sources/preuves
-- [ ] limites explicites
+Afficher :
+- [ ] produit
+- [ ] routes candidates
+- [ ] détail par marché et filière
+- [ ] OUI/NON
+- [ ] motifs
+- [ ] filières
+- [ ] entités
+- [ ] numéros
+- [ ] preuves
+- [ ] limites
 
-## Phase 7 — Validation MVP
+## Phase 9 — Intégration Solenda
 
-Tester d'abord sur un corpus de cas représentatifs revus indépendamment :
-- produit emballage seul ;
-- EEE sans batterie ;
-- EEE avec batterie ;
-- grande marque internationale ;
-- marque locale ;
-- private label ;
-- produit introuvable ;
-- flux transfrontalier ;
-- itinéraires passant par un prep center dans un pays tiers ;
-- mêmes fournisseur/GTIN vers deux marchés cibles différents ;
-- même marché cible avec des pays de stock initial/FBA différents ;
-- routes avec couverture amont liée au SKU et routes sans preuve de ce lien ;
-- obligations établies de l'entité vendeuse évaluée, de l'entité amont et cas où le rôle reste indéterminé ;
-- pays de stock FBA inconnu ;
-- registre indisponible.
+- [ ] même endpoint que le dashboard
+- [ ] payload enrichi facultatif
+- [ ] données produit/sourcing/marketplace réutilisées
+- [ ] contexte client transmis par Solenda
+- [ ] aucun accès direct à la DB Solenda
+- [ ] versioning API stable
 
-Mesurer et publier en interne la précision des états VÉRIFIÉ, le taux de cas vérifiables, les taux NON VÉRIFIÉ / CONTRADICTOIRE, et la fraîcheur des preuves. Définir les seuils avant l'évaluation. L'extension de pays/filières est conditionnée à des résultats acceptables et à des sources auditées dans chaque nouveau périmètre.
+## Validation MVP — cas minimaux
 
-## Gate d'intégration Solenda
+- [ ] FBA inconnu
+- [ ] fournisseur / entité amont non résolu
+- [ ] REP amont présente mais lien produit non prouvé
+- [ ] registre indisponible
+- [ ] produit multi-filières
+- [ ] même GTIN vers plusieurs marchés
+- [ ] plusieurs routes vers un même marché
+- [ ] couverture amont valide
+- [ ] inscription propre déjà valide
+- [ ] preuve insuffisante
+- [ ] contradictions entre sources
 
-Le MVP n'est candidat à l'intégration que si :
-- les décisions sont explicables ;
-- les sources sont auditables ;
-- les résultats VÉRIFIÉ sont fiables sur un jeu de référence indépendant et leur couverture est suffisante ;
-- NON CONFORME est distingué de NON VÉRIFIÉ ;
-- les providers gratuits sont suffisamment stables ;
-- le coût opérationnel est acceptable ;
-- le moteur est utilisable via API indépendante du dashboard.
+## Gate d'intégration
+
+Intégration possible si :
+- décisions explicables ;
+- règles auditées ;
+- preuves traçables ;
+- faux OUI maîtrisés ;
+- providers suffisamment stables ;
+- API autonome ;
+- dashboard et Solenda produisent le même résultat détaillé sur le même payload.
