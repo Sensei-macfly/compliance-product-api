@@ -19,6 +19,7 @@ Valider un moteur de couverture REP/EPR amont par produit et marché avant inté
 - [x] immatriculation propre vendeur exclue comme chemin favorable V1
 - [x] UX : numéros visibles même sur NON
 - [x] messages utilisateur français / codes techniques anglais
+- [x] fail-closed si un fait réglementaire requis est absent ou hors périmètre V1
 - [ ] auditer les sources officielles
 - [ ] valider les règles pays × filière × rôle
 - [ ] constituer le corpus de référence
@@ -35,6 +36,9 @@ Pour chaque combinaison pays × filière × rôle :
 - [ ] source indisponible => NON/UNVERIFIED
 - [ ] couverture amont incomplète => NON/UNVERIFIED
 - [ ] applicabilité filière non résolue => NON
+- [ ] fait réglementaire requis absent/hors scope => NON/UNVERIFIED
+- [ ] aucune hypothèse logistique favorable inventée pour produire OUI
+- [ ] violation connue de l'hypothèse produit V1 => NON/UNVERIFIED
 
 ## Phase 1 — Fondations
 
@@ -164,6 +168,8 @@ Afficher immédiatement :
 - [ ] produit multi-filières
 - [ ] couverture amont complète
 - [ ] contradiction entre sources
+- [ ] règle nécessitant un fait réglementaire hors scope/non disponible => NON
+- [ ] produit connu comme bundlé/reconditionné/modifié => NON/UNVERIFIED
 - [ ] même GTIN analysé sur plusieurs marchés via appels distincts
 
 ## Gate d'intégration
