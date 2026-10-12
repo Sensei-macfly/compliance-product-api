@@ -10,24 +10,30 @@ Valider le moteur REP/EPR comme brique indépendante avant intégration éventue
 - [x] architecture API-first
 - [x] dashboard autonome + Solenda sur le même moteur
 - [x] Amazon optionnel
-- [x] décision utilisateur OUI/NON
+- [x] décision utilisateur OUI/NON uniforme
 - [x] états internes conservateurs
 - [x] distinction produit / entité / registre / couverture
 - [x] profil client basé sur des faits
 - [x] suppression de la logique « le client déclare ses pays FBA possibles »
-- [x] REP/EPR déjà détenues non centrales en V1
+- [x] REP/EPR déjà détenues facultatives mais supportées
+- [x] résultat détaillé par route × marché × filière
 - [ ] auditer toutes les sources officielles retenues
-- [ ] valider les règles pays × filière
-- [ ] constituer un jeu de cas de référence
+- [ ] valider les règles pays × filière × rôle
+- [ ] constituer un jeu de cas de référence indépendant
 
 ## Gate avant développement du moteur
 
 Avant d'autoriser un OUI réel :
 - [ ] chaîne de preuve documentée ;
-- [ ] règle pays/filière documentée ;
+- [ ] règle pays × filière × rôle documentée ;
 - [ ] données minimales nécessaires définies ;
 - [ ] comportement UNVERIFIED défini ;
-- [ ] corpus de test revu indépendamment.
+- [ ] corpus de test revu indépendamment ;
+- [ ] cas de données FBA inconnues couvert ;
+- [ ] cas de preuve amont incomplète couvert ;
+- [ ] cas de registre indisponible couvert ;
+- [ ] cas d'inscription propre existante couvert ;
+- [ ] cas multi-routes / multi-marchés / multi-filières couvert.
 
 ## Phase 1 — Fondations
 
@@ -48,11 +54,12 @@ Avant d'autoriser un OUI réel :
 - [ ] VAT registration countries
 - [ ] available prep centers
 - [ ] optional Amazon/FBA facts explicitly known
+- [ ] optional existing seller EPR/REP/IDU registrations
 
 Ne pas demander :
 - liste déclarative de pays FBA « possibles »
 - routes construites manuellement
-- REP/EPR personnelles comme donnée centrale
+- REP/EPR personnelles comme champ obligatoire de l'UX
 
 ## Phase 3 — Product & Entity Resolution
 
@@ -97,11 +104,12 @@ Entrées :
 - stock fournisseur ;
 - marketplace cible ;
 - prep centers ;
-- facts Amazon/FBA explicites si disponibles ;
+- faits Amazon/FBA explicites si disponibles ;
 - règles documentées.
 
 Le moteur :
 - [ ] génère les routes candidates raisonnables ;
+- [ ] distingue stock fournisseur, prep/transit, stock FBA et marketplace ;
 - [ ] ne demande pas au client de construire la route ;
 - [ ] n'infère pas un pays FBA uniquement depuis la TVA ;
 - [ ] ne produit pas un produit cartésien arbitraire ;
@@ -109,14 +117,17 @@ Le moteur :
 
 ## Phase 7 — Compliance Engine
 
-- [ ] règles pays/filières
+- [ ] règles pays/filières/rôles
 - [ ] upstream coverage
+- [ ] existing seller registration assessment
 - [ ] local entity resolution
-- [ ] YES/NO
+- [ ] résultats par route × marché × filière
+- [ ] OUI/NON
 - [ ] reason codes
 - [ ] missing_context
 - [ ] evidence
 - [ ] aucune note/score visible
+- [ ] NON/UNVERIFIED ne doit pas être présenté comme interdiction ou obligation certaine
 
 ## Phase 8 — Dashboard autonome
 
@@ -133,6 +144,7 @@ Données complémentaires :
 Afficher :
 - [ ] produit
 - [ ] routes candidates
+- [ ] détail par marché et filière
 - [ ] OUI/NON
 - [ ] motifs
 - [ ] filières
@@ -150,6 +162,20 @@ Afficher :
 - [ ] aucun accès direct à la DB Solenda
 - [ ] versioning API stable
 
+## Validation MVP — cas minimaux
+
+- [ ] FBA inconnu
+- [ ] fournisseur / entité amont non résolu
+- [ ] REP amont présente mais lien produit non prouvé
+- [ ] registre indisponible
+- [ ] produit multi-filières
+- [ ] même GTIN vers plusieurs marchés
+- [ ] plusieurs routes vers un même marché
+- [ ] couverture amont valide
+- [ ] inscription propre déjà valide
+- [ ] preuve insuffisante
+- [ ] contradictions entre sources
+
 ## Gate d'intégration
 
 Intégration possible si :
@@ -159,4 +185,4 @@ Intégration possible si :
 - faux OUI maîtrisés ;
 - providers suffisamment stables ;
 - API autonome ;
-- dashboard et Solenda produisent le même résultat sur le même payload.
+- dashboard et Solenda produisent le même résultat détaillé sur le même payload.
