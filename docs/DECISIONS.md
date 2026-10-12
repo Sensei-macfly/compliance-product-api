@@ -29,7 +29,10 @@ Le profil contient principalement :
 - pays d'établissement ;
 - pays où le client dispose d'une immatriculation TVA ;
 - prep centers réellement disponibles ;
-- paramètres Amazon/FBA explicitement connus lorsqu'ils sont disponibles automatiquement ou transmis par Solenda.
+- paramètres Amazon/FBA explicitement connus lorsqu'ils sont disponibles automatiquement ou transmis par Solenda ;
+- **immatriculations REP/EPR/IDU déjà détenues, lorsqu'elles existent et sont disponibles**.
+
+Les immatriculations REP/EPR existantes sont **facultatives et non centrales dans l'UX V1**, mais le moteur doit pouvoir les exploiter pour déterminer qu'aucune **nouvelle** inscription n'est nécessaire lorsqu'une inscription propre, valide et applicable existe déjà.
 
 La TVA est une donnée de profil utile, mais :
 - elle ne prouve pas la conformité REP/EPR ;
@@ -47,14 +50,6 @@ La TVA est une donnée de profil utile, mais :
 
 Solenda pourra transmettre ces informations directement via l'API.
 
-## REP/EPR détenues par le client
-
-Les enregistrements REP/EPR/IDU déjà détenus par le client **ne sont pas une donnée centrale de la V1**.
-
-L'objectif principal est d'identifier les routes qui **évitent** d'imposer un nouvel enregistrement au client.
-
-Le modèle peut rester extensible pour prendre en compte une immatriculation existante plus tard, mais elle ne doit pas structurer l'UX ni le moteur V1.
-
 ## Routes
 
 Le moteur génère les routes candidates raisonnables à partir :
@@ -67,6 +62,22 @@ Le moteur génère les routes candidates raisonnables à partir :
 Ne pas coder une route unique.
 Ne pas demander au client de construire lui-même le trajet.
 Ne pas croiser arbitrairement tous les pays sans règle ou donnée justificative.
+
+Le modèle doit toujours préserver séparément :
+- stock fournisseur ;
+- transit / prep center ;
+- stock FBA ;
+- marketplace cible.
+
+## Granularité du résultat
+
+La décision doit être calculée au minimum par :
+
+> **route × marché cible × filière**
+
+Un verdict global éventuel n'est qu'un résumé. Il ne doit jamais masquer les résultats détaillés.
+
+Pour un produit multi-filières, une route ne peut être favorable que si toutes les filières applicables requises sont favorablement résolues.
 
 ## UX autonome
 
@@ -89,13 +100,20 @@ L'utilisateur voit uniquement :
 - **OUI**
 - **NON**
 
+Cette convention doit être utilisée uniformément dans les documents, l'API V1 et le dashboard.
+
 Les états internes peuvent être :
 - VERIFIED
 - UNVERIFIED
 - NON_COMPLIANT
 - CONTRADICTORY
 
-Un NON lié à un manque de preuve ne signifie pas « vente juridiquement interdite ». L'explication doit préciser ce qui manque.
+Un **NON** lié à un manque de preuves signifie seulement que le moteur ne peut pas démontrer que la route peut être poursuivie sans nouvel enregistrement.
+
+Il ne signifie pas automatiquement :
+- que la vente est juridiquement interdite ;
+- que le vendeur doit certainement s'enregistrer ;
+- qu'une non-conformité juridique est établie.
 
 Aucun score de confiance visible.
 
@@ -121,7 +139,28 @@ Le moteur doit distinguer :
 3. entité juridique locale résolue ;
 4. enregistrement officiel vérifié ;
 5. lien entre l'entité, la filière, le produit et le marché ;
-6. applicabilité à la route analysée.
+6. applicabilité à la route analysée ;
+7. inscription propre déjà valide du vendeur, lorsqu'elle existe.
+
+## Gate avant tout OUI réel
+
+Aucun OUI réel ne doit être produit pour une combinaison pays × filière × rôle tant que :
+- la règle applicable n'est pas documentée ;
+- la source ou preuve utilisée n'est pas auditée ;
+- le comportement en cas de données manquantes n'est pas testé ;
+- des cas négatifs et ambigus n'ont pas été couverts.
+
+Cas minimaux à tester :
+- pays FBA inconnu ;
+- entité amont non résolue ;
+- REP amont trouvée mais non liée au produit ;
+- registre officiel indisponible ;
+- produit multi-filières ;
+- même GTIN vers plusieurs marchés ;
+- plusieurs routes vers un même marché ;
+- couverture amont valide ;
+- inscription propre déjà valide ;
+- preuve insuffisante.
 
 ## V1 ≠ avis juridique
 
