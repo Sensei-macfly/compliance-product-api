@@ -1,18 +1,36 @@
 ---
 name: Amazon FBA cross-border flow
-description: The user's sales and supply-chain model relevant to this EPR compliance project.
+description: Product-model decisions for the EPR compliance engine.
 ---
 
-The user's company is the seller on Amazon. It buys products from suppliers and wholesalers in France, Germany, Italy, Spain and more broadly the EU. Products can transit through a prep center in another European country before Amazon FBA and resale across European markets. The product should analyze each supported source/storage-to-target-market combination to determine whether the user's company needs its own EPR registration or can rely on a specifically identified upstream entity, conservatively when the link is not proven.
+The product is a standalone, API-first compliance engine that may later be integrated into Solenda. Solenda remains the sourcing platform.
 
-The product must generalize beyond the creator's own company: multiple client sellers should use the same API-first engine from the built-in dashboard or a third-party application sending enriched data. Generate candidate routes dynamically from client configuration, sourcing/stock options, product facts, available prep centers, supported transitions, FBA profiles and target marketplaces; do not hard-code one route. Client VAT-registration countries may be routing constraints only under documented rules and are never proof of EPR coverage or FBA inventory location.
+The seller buys products from suppliers/wholesalers across Europe. Stock may transit through prep centers before Amazon FBA and sale on European marketplaces.
 
-**Why:** the user stated this business model; the answer depends on the full seller and fulfillment route, not just a product identifier or one supplier-country field.
+Core product rule: **clients provide facts; the engine produces deductions**.
 
-**How to apply:** represent supplier establishment, physical stock, prep-center locations, FBA program and known/eligible inventory countries, target market, each client's seller entity and claimed upstream responsible entity separately. Do not infer routes from VAT countries, or that an upstream registration covers the seller, product/SKU, category or route without applicable rules and evidence.
+Persistent client facts can include:
+- seller legal entity and establishment country;
+- VAT-registration countries;
+- prep centers actually available;
+- optional Amazon/FBA facts explicitly known from Solenda, Amazon or another reliable source.
 
-For the user-facing decision, expose only OUI/NON for whether the route can proceed without a new seller registration. Keep detailed states such as UNVERIFIED and their reason codes internal; explain a NON due to missing proof without presenting it as a legal prohibition or a proven duty to register.
+Per-analysis facts include:
+- EAN/GTIN/UPC/ASIN;
+- supplier/source stock country;
+- target marketplace;
+- optional supplier/product/Amazon enrichment.
 
-**Why:** the user explicitly wants internal uncertainty states preserved without turning them into a third commercial decision.
+Do not ask the client to declare which FBA countries are "possible" as a guess. Do not require the client to manually construct a route. Generate reasonable candidate routes from facts and documented rules.
 
-**How to apply:** return OUI only when the required evidence establishes a favorable result; return NON for all other internal states, with plain-language explanation and evidence details.
+Existing seller EPR registrations are not a central V1 input because the product's primary goal is to identify routes that avoid requiring a new EPR/REP/IDU registration. The model may remain extensible for existing registrations later.
+
+VAT-registration countries are context only. They do not prove FBA storage eligibility, EPR compliance, or upstream coverage.
+
+Amazon SP-API is optional. The engine must work without a Professional Amazon account.
+
+The dashboard and Solenda must call the same business API. Solenda may provide richer facts, but the compliance engine must not read the Solenda database directly.
+
+User-facing output is binary YES/NO. Internal states may be VERIFIED, UNVERIFIED, NON_COMPLIANT or CONTRADICTORY. UNKNOWN is never treated as compliant.
+
+An upstream EPR/IDU number is never enough by itself to prove coverage of the seller, product/SKU, category, market or route.
