@@ -2,17 +2,25 @@
 
 ## 1. Objectif
 
-Construire un MVP autonome de pré-validation REP/EPR permettant de répondre :
+Construire un MVP autonome qui vérifie, pour un parcours REP/EPR précisément défini, les obligations et preuves identifiables à partir de sources auditables. La V1 ne doit pas prétendre autoriser globalement la vente d'un produit.
 
 > **Ce produit est stocké chez mon fournisseur dans ce pays. Dans quels marchés puis-je le revendre avec mon modèle actuel, sans nouvelle immatriculation REP/EPR/IDU ?**
 
-Le MVP sert à valider une brique qui pourra ensuite être intégrée à Solenda. Il ne doit pas devenir une plateforme de sourcing.
+Le pilote sert à valider une brique qui pourra ensuite être intégrée à Solenda. Il ne doit pas devenir une plateforme de sourcing. La question de revente ci-dessus reste la vision produit à long terme, pas une promesse du premier pilote.
 
 ## 2. Entrées
 
-Deux champs obligatoires :
-1. EAN / GTIN / UPC / ASIN ;
-2. pays où le produit est physiquement stocké chez le fournisseur.
+Deux champs ont été proposés pour l'expérience initiale, mais ils ne suffisent pas à établir à qui incombe l'obligation REP/EPR :
+1. EAN / GTIN / UPC / ASIN, comme aide à l'identification — pas comme preuve de catégorie ou de couverture ;
+2. pays où le produit est physiquement stocké chez le fournisseur, comme contexte logistique — pas comme preuve du rôle REP de chaque acteur.
+
+Avant de figer l'UX, le pilote doit déterminer les informations minimales nécessaires au cas analysé :
+- l'entité juridique dont on évalue les obligations, identifiée sans ambiguïté ;
+- son rôle dans le parcours (vendeur, importateur, metteur sur le marché, place de marché, etc.) et le canal de vente retenu ;
+- l'entité qui déclare remplir les obligations pour le produit et les preuves qui relient cette entité au produit/parcours ;
+- les caractéristiques produit nécessaires à la classification de la filière et, le cas échéant, de ses catégories.
+
+Le pays de stock reste une donnée de contexte tant qu'une règle vérifiée ne démontre pas son effet sur le parcours retenu. Ne pas demander un numéro de TVA par principe : demander l'identifiant légal réellement nécessaire à la résolution de l'entité dans la source utilisée. Pour les entités étrangères, la source ADEME peut utiliser un identifiant fiscal étranger.
 
 Pays possibles :
 - France
@@ -33,18 +41,22 @@ Automatiquement :
 - ES
 - GB
 
+Ce périmètre est une cible ultérieure, pas le périmètre du premier pilote. Le pilote de faisabilité de source proposé est France / filière EEE ; il vérifie une preuve d'enregistrement d'une entité et d'une filière. Il ne démontre pas à lui seul qu'un produit particulier peut être vendu sans autre démarche.
+
 ## 4. Verdict
 
-Décision utilisateur uniquement :
-- **OUI**
-- **NON**
+Ne pas confondre état de la preuve et décision de prudence :
+- **VÉRIFIÉ** : les preuves requises pour le parcours REP/EPR défini sont suffisantes et cohérentes ;
+- **NON CONFORME** : une obligation applicable est établie et des preuves suffisantes montrent qu'elle n'est pas remplie ;
+- **NON VÉRIFIÉ** : informations, correspondance d'entité, couverture de source ou preuves insuffisantes ;
+- **CONTRADICTOIRE** : des sources pertinentes se contredisent.
 
-Pas de score visible.
+La recommandation opérationnelle peut rester binaire : poursuivre le parcours REP/EPR uniquement si l'état est VÉRIFIÉ ; sinon, suspendre et demander une vérification. « Suspendre » ou « NON VÉRIFIÉ » ne signifie pas que la vente est juridiquement interdite. Aucun score de confiance visible.
 
 Principe :
 > **UNKNOWN ≠ COMPLIANT**
 
-Une preuve insuffisante, une entité non résolue, une filière non vérifiée ou un registre indisponible ne doivent jamais produire OUI.
+Une preuve insuffisante, une entité non résolue, une filière non vérifiée ou un registre indisponible ne doivent jamais produire l'état VÉRIFIÉ.
 
 ## 5. Dashboard
 
@@ -56,7 +68,7 @@ Afficher :
 - fabricant probable ;
 - catégorie ;
 - pays stock fournisseur ;
-- verdict OUI/NON pour FR/DE/IT/ES/GB ;
+- état VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE pour FR/DE/IT/ES/GB ;
 - obligations REP détectées ;
 - entités juridiques ;
 - numéros/enregistrements trouvés ;
@@ -96,11 +108,12 @@ Identifier
 → Brand Resolution
 → Entity Resolution
 → Corporate Graph
+→ Seller / responsible-entity + sales-path resolution
 → Local Entity FR/DE/IT/ES/GB
 → EPR Classification
 → Official Registry Matching
 → Country/Supply-chain Rules
-→ OUI/NON
+→ EPR_STATUS + action
 → Evidence + Reason Codes
 ```
 
@@ -177,13 +190,15 @@ Pour chaque enregistrement conserver :
 
 ## 14. Règles minimales
 
-- filière obligatoire manquante => NON ;
-- entité locale non résolue => NON ;
-- registre indisponible sans cache récent => NON ;
+- filière obligatoire manquante ou non classifiable => NON VÉRIFIÉ ;
+- entité ou rôle dans le parcours non résolu => NON VÉRIFIÉ ;
+- registre indisponible sans cache dont la fraîcheur est définie => NON VÉRIFIÉ ;
 - numéro REP de la marque seul => insuffisant ;
 - numéro d'un autre pays => insuffisant pour le pays cible ;
 - achat dans un pays ≠ preuve de couverture dans un autre ;
 - produit multi-filières : toutes les filières requises doivent être vérifiées.
+- absence de correspondance dans un registre => NON CONFORME uniquement si la source est complète, à jour selon une règle documentée, et l'entité est résolue sans ambiguïté ; sinon NON VÉRIFIÉ.
+- un IDU établit l'enregistrement de l'entité pour une filière et des catégories données ; il ne relie pas à lui seul l'entité au GTIN, au vendeur, au contrat ou au parcours analysé.
 
 ## 15. Reason Codes
 
@@ -217,14 +232,20 @@ Réponse :
   "analysis_id": "uuid",
   "product": {},
   "markets": {
-    "FR": {"verdict": "NO"},
-    "DE": {"verdict": "YES"},
-    "IT": {"verdict": "NO"},
-    "ES": {"verdict": "YES"},
-    "GB": {"verdict": "NO"}
+    "FR": {
+      "epr_status": "UNVERIFIED",
+      "action": "HOLD",
+      "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE",
+      "scope": {
+        "stream": "EEE",
+        "rule_version": "..."
+      }
+    }
   }
 }
 ```
+
+Le schéma doit aussi versionner les règles appliquées et conserver la date de l'analyse ainsi que les dates de récupération des preuves. `action` est un garde-fou pour le périmètre REP/EPR évalué, pas une autorisation générale de mise en vente.
 
 Prévoir aussi :
 - GET /api/analyses/:id
@@ -300,7 +321,7 @@ Unitaires :
 - détection EAN/GTIN/UPC/ASIN ;
 - normalisation d'entreprise ;
 - classification filières ;
-- moteur OUI/NON ;
+- moteur d'états VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE ;
 - données manquantes/contradictoires.
 
 Intégration :
@@ -312,7 +333,13 @@ E2E :
 - produit introuvable ;
 - société non résolue ;
 - numéro REP trouvé mais relation insuffisante ;
-- registre indisponible.
+- registre indisponible ;
+- correspondance d'entité ambiguë ;
+- absence d'enregistrement avec source incomplète ou périmée ;
+- conflit de sources ;
+- preuve positive sur le producteur, mais lien au vendeur/parcours non établi.
+
+Prévoir un jeu de référence relu indépendamment et mesurer au minimum la fiabilité des états VÉRIFIÉ, la part des cas vérifiables et les parts NON VÉRIFIÉ / CONTRADICTOIRE. Fixer les seuils de lancement avant d'évaluer le jeu, puis mesurer sur des cas tenus à l'écart de l'élaboration des règles. Un taux de faux positifs nul sur un petit jeu ne constitue pas une garantie universelle.
 
 ## 22. Stack
 
@@ -344,17 +371,16 @@ Ne pas implémenter :
 
 ## 24. Critères d'acceptation
 
-La V1 est fonctionnelle si :
+Le pilote est fonctionnel si :
 1. un EAN/GTIN/ASIN peut être saisi ;
-2. le pays stock fournisseur peut être sélectionné ;
-3. le produit est résolu autant que possible ;
-4. les filières REP sont classifiées ;
-5. les entités sont résolues ;
-6. les registres officiels sont interrogés/synchronisés ;
-7. FR/DE/IT/ES/GB reçoivent chacun OUI/NON ;
-8. chaque verdict possède une raison ;
-9. chaque preuve possède une source ;
-10. une donnée insuffisante donne NON ;
-11. aucune API commerciale payante n'est indispensable ;
-12. aucune connexion Amazon n'est indispensable ;
-13. le moteur est consommable via API pour une future intégration Solenda.
+2. l'acteur, le parcours de vente et les caractéristiques nécessaires à la classification sont définis ;
+3. le pilote France / EEE consulte ou synchronise la source ADEME avec des limites et dates de fraîcheur explicites ;
+4. le lien entre l'entité enregistrée et l'obligation évaluée est justifié, ou l'analyse reste NON VÉRIFIÉE ;
+5. les états VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE sont distingués et expliqués ;
+6. chaque preuve est datée, attribuée à une source et reliée à sa portée ;
+7. le jeu de référence permet d'évaluer fiabilité positive et couverture selon des seuils décidés à l'avance ;
+8. le résultat est présenté comme un contrôle REP/EPR borné et non comme un avis juridique ou une autorisation générale de vente.
+9. le pilote ne dépend ni d'une API commerciale payante ni d'une connexion Amazon ;
+10. le contrat API reste documenté pour permettre une future intégration à Solenda après validation du pilote.
+
+L'extension aux cinq marchés, aux trois filières et à une API intégrable à Solenda vient après la validation de ce pilote.

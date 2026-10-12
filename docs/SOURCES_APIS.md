@@ -94,7 +94,30 @@ Chercher :
 - statut ;
 - date de vérification.
 
-Statut : **V1**.
+Statut : **SOURCE CANDIDATE DU PILOTE FRANCE / EEE**. Ce registre permet de vérifier qu'une entité est déclarée pour une filière et des catégories. Il ne contient pas de GTIN/ASIN et ne prouve pas, seul, que cette entité remplit l'obligation pour le vendeur et le produit du parcours analysé.
+
+#### Source vérifiée le 12 octobre 2026
+
+- Jeu officiel ADEME/SYDEREP : [REP - Liste des producteurs enregistrés dans SYDEREP avec leur IDU](https://data.ademe.fr/datasets/rep-producteurs-idu)
+- API publique : `https://data.ademe.fr/data-fair/api/v1/datasets/rep-producteurs-idu/`
+- API des lignes filtrables et paginées : `GET /lines` ; filtres disponibles par colonne, téléchargement complet via `/full`.
+- Le jeu annonce une actualisation quotidienne et une licence ouverte ; environ 309 000 lignes au moment de la vérification.
+- Champs utiles observés : `Filiere`, `Identifiant_societe`, `Pays`, `Identifiant_unique`, `Categories_agrement`, `Immatriculation`, `Raison_Sociale`.
+- `Identifiant_societe` peut désigner un SIREN/SIRET pour une entreprise résidente ou un identifiant fiscal / numéro de TVA pour une entreprise étrangère. Ne pas imposer un format d'identifiant universel.
+- La réponse testée sur `Filiere=EEE` renvoie des lignes d'entités étrangères possédant un IDU français. Ne pas traiter le champ `Pays` comme le pays du marché cible ; vérifier son sens dans le référentiel ADEME avant de l'utiliser.
+- L'API limite les appels anonymes à 600 requêtes par tranche de 60 secondes et limite aussi le débit et le temps de traitement. Préférer un téléchargement et une synchronisation locale quotidienne au trafic de requêtes par analyse.
+- La page ADEME signale que la suppression d'un IDU collectif dépend de l'initiative de l'éco-organisme et que la liste ne reflète pas les producteurs ayant effectué une déclaration de données. La date de mise à jour quotidienne n'est donc pas, à elle seule, une garantie que chaque fait réglementaire lié au producteur est complet.
+- Les codes de filière et catégories doivent être chargés depuis le référentiel ADEME fourni et versionnés. Le schéma et les listes de codes peuvent évoluer.
+
+Limite centrale : le jeu établit un enregistrement d'une entité dans une filière/catégorie. Il ne prouve pas la relation entre le produit identifié par GTIN, le vendeur évalué, son fournisseur et l'entité enregistrée. Cette relation doit venir d'une source indépendante ou rester **NON VÉRIFIÉE**.
+
+Références officielles :
+- [Recherche de producteurs REP (ADEME)](https://filieres-rep.ademe.fr/recherche-producteurs)
+- [Comprendre l'IDU et les rôles vendeur/producteur (ADEME)](https://filieres-rep.ademe.fr/identifiant-unique)
+- [Documentation de l'API publique](https://data.ademe.fr/data-fair/api/v1/datasets/rep-producteurs-idu/api-docs.json)
+- Licence indiquée sur le jeu : [Licence Ouverte / Open Licence](https://www.etalab.gouv.fr/licence-ouverte-open-licence). Respecter ses obligations et les limites d'usage de l'API.
+
+Cette vérification de source ne valide pas les règles juridiques françaises applicables à chaque rôle, canal ou produit ; elle ne valide pas non plus les fournisseurs de données des quatre autres marchés.
 
 ### Allemagne
 Packaging :

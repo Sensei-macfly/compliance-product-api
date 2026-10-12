@@ -19,11 +19,12 @@ Entity Resolution Engine
         ↓
 Corporate Graph
         ↓
-Local Entity Resolution
-FR | DE | IT | ES | GB
+Seller / responsible entity + sales-path resolution
+        ↓
+Pilot: France / EEE
         ↓
 EPR Classification
-PACKAGING | EEE/WEEE | BATTERY
+Product facts → filière and applicable categories
         ↓
 Official Registry Matching
         ↓
@@ -74,6 +75,8 @@ Relations prévues :
 
 Chaque relation conserve sa source et sa date de vérification.
 
+Ajouter une relation entre l'entité qui doit remplir l'obligation et le parcours produit/commercial évalué. Ne pas déduire cette relation de la seule marque, du propriétaire du GTIN ou d'une société du même groupe.
+
 ### EPR Classification
 Minimum V1 :
 - PACKAGING
@@ -83,10 +86,14 @@ Minimum V1 :
 Prévoir une architecture extensible pour d'autres filières sans les implémenter dans la V1.
 
 ### Compliance Engine
-Entrée :
+Entrée minimale à valider pour chaque parcours :
 ```json
 {
   "product_id": "...",
+  "evaluated_entity_id": "...",
+  "responsible_entity_id": "...",
+  "seller_role": "...",
+  "sales_channel": "...",
   "supplier_stock_country": "DE",
   "target_country": "FR"
 }
@@ -96,23 +103,31 @@ Sortie :
 ```json
 {
   "country": "FR",
-  "verdict": "NO",
-  "sell_allowed": false,
-  "stock_allowed": false,
+  "epr_status": "UNVERIFIED",
+  "action": "HOLD",
   "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE",
+  "scope": {
+    "stream": "EEE",
+    "rule_version": "...",
+    "evaluated_at": "..."
+  },
   "summary": "..."
 }
 ```
 
+États possibles de `epr_status` : `VERIFIED`, `NON_COMPLIANT`, `UNVERIFIED`, `CONFLICT`. `HOLD` indique seulement que le parcours REP/EPR analysé ne doit pas être considéré comme vérifié ; il ne signifie pas à lui seul que la vente est interdite. Ne pas exposer `sell_allowed` ou `stock_allowed` comme conclusions générales sans couvrir les règles correspondantes.
+
 ## Règles minimales
 
-- une filière obligatoire non vérifiée => NON ;
-- entité locale non résolue => NON ;
-- registre indisponible sans cache récent => NON ;
+- filière ou catégorie non vérifiée => UNVERIFIED ;
+- entité ou rôle dans le parcours non résolu => UNVERIFIED ;
+- registre indisponible sans cache à la fraîcheur définie => UNVERIFIED ;
 - une marque enregistrée ne suffit pas à prouver la couverture ;
 - un numéro d'un autre pays ne vaut pas couverture locale ;
 - l'achat dans un pays ne prouve pas la conformité du pays de destination ;
 - UNKNOWN ≠ COMPLIANT.
+- une absence dans le registre n'est NON_COMPLIANT que si l'exhaustivité, l'actualité de la source et l'identité de l'entité ont été établies ; sinon UNVERIFIED.
+- un IDU officiel prouve l'enregistrement de l'entité pour une filière donnée, mais ne lie pas à lui seul cet enregistrement à un GTIN, un vendeur ou un contrat.
 
 ## Persistance
 
@@ -146,7 +161,7 @@ Réutiliser les résolutions existantes :
 
 ## Synchronisation
 
-Préférer les imports bulk officiels lorsqu'ils existent :
+Préférer les imports bulk officiels lorsqu'ils existent. Pour le candidat France / EEE, l'ADEME fournit une API publique et un export complet actualisé quotidiennement ; faire une synchronisation locale plutôt qu'un appel au registre par analyse :
 
 ```text
 Official Registry
