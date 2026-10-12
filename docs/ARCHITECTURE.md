@@ -2,9 +2,7 @@
 
 ## Principe
 
-Le projet doit être conçu **API-first / headless-first**.
-
-Deux clients utilisent le même moteur :
+Architecture **API-first / headless-first**.
 
 ```text
 Dashboard autonome ─┐
@@ -14,14 +12,23 @@ Solenda ────────────┘
 
 Aucune logique métier ne doit exister uniquement dans le dashboard.
 
-## Flux général
+## Simplification structurante
+
+La V1 n'a **pas de Route Generator**.
+
+Elle ne modélise pas :
+- transit ;
+- prep centers ;
+- stockage FBA ;
+- redistribution Amazon.
+
+Le cœur d'analyse est :
 
 ```text
-Faits client
-+
-Faits produit / sourcing / marketplace
-        ↓
-Normalisation & enrichissement
+Produit
++ vendeur
++ pays physique du stock fournisseur
++ marché cible
         ↓
 Product Resolution
         ↓
@@ -29,80 +36,38 @@ Entity Resolution
         ↓
 EPR Classification
         ↓
+Target-market Rules
+        ↓
 Official Registry Matching
         ↓
-Route Generator
+Upstream Coverage Assessment
         ↓
-Country / Supply-chain Rules
-        ↓
-Résultats route × marché × filière
+Stream Results
         ↓
 OUI / NON
-        ↓
-Reasons + Evidence
 ```
 
-## Faits client
+## Faits persistants client
 
-Persistants :
-- seller entity ;
+- seller legal entity ;
 - country of establishment ;
-- VAT registration countries ;
-- available prep centers ;
-- optional Amazon/FBA facts explicitly known ;
-- optional existing seller EPR/REP/IDU registrations.
+- VAT registration countries si disponibles.
 
-Important :
-- le profil décrit des faits ;
-- il ne contient pas une liste déclarative de pays « où je peux vendre/stocker » ;
-- le moteur produit cette conclusion ;
-- les immatriculations REP existantes sont facultatives, mais exploitables lorsqu'elles existent.
+Les immatriculations REP propres du vendeur ne sont pas une voie positive recherchée par la V1.
 
 ## Faits transactionnels
 
-Par analyse :
 - identifier ;
-- sourcing / supplier stock country ;
+- supplier stock country ;
 - target marketplace ;
 - optional supplier identity ;
-- optional enriched product attributes ;
-- optional Amazon/FBA facts from Solenda or providers.
+- optional enriched product attributes.
 
-## Route Generator
+### Définition de supplier_stock_country
 
-Le générateur produit des routes candidates raisonnables à partir des faits disponibles.
+Le pays où le produit est physiquement stocké chez le fournisseur au moment du sourcing.
 
-Exemple conceptuel :
-
-```text
-Supplier stock IT
-→ Prep FR
-→ FBA DE
-→ Marketplace DE
-```
-
-Le générateur ne doit :
-- ni coder un trajet unique ;
-- ni générer un produit cartésien arbitraire de tous les pays ;
-- ni exiger que le client construise lui-même la route.
-
-Le modèle préserve distinctement :
-- supplier stock ;
-- transit simple ;
-- prep center ;
-- FBA inventory country ;
-- target marketplace.
-
-Types de segments V1 :
-- `SUPPLIER_STOCK`
-- `TRANSIT`
-- `PREP_CENTER`
-- `FBA_INVENTORY`
-- `MARKETPLACE`
-
-Les segments sont ordonnés. `TRANSIT` et `PREP_CENTER` peuvent être répétés. Un segment `PREP_CENTER` doit référencer un `prep_center_id` du profil client, pas seulement un pays.
-
-Une route peut être partielle si certains faits sont inconnus. Dans ce cas, le moteur conserve l'état interne UNVERIFIED et retourne NON à l'utilisateur si l'information manquante est nécessaire à la décision.
+Ne pas le déduire du pays de facture ou du siège social du fournisseur.
 
 ## Product Resolution
 
@@ -119,7 +84,7 @@ Sortie possible :
 - product_type ;
 - image_url.
 
-Amazon SP-API reste un provider optionnel.
+Amazon SP-API peut enrichir cette étape mais reste optionnelle.
 
 ## Entity Resolution
 
@@ -136,30 +101,45 @@ Distinguer :
 
 ## EPR Classification
 
-Univers minimum V1 :
+Univers V1 :
 - PACKAGING
 - EEE/WEEE
 - BATTERY
 
-Pour chaque route, toutes les filières de cet univers sont représentées dans `streams[]` avec un état d'applicabilité :
+Chaque analyse contient une entrée pour chacune de ces filières.
+
+`applicability` :
 - APPLICABLE
 - NOT_APPLICABLE
 - UNRESOLVED
 
-Une filière UNRESOLVED force NON. Le moteur conserve aussi un `stream_scope_state` au niveau de la route ; si le périmètre global des filières n'est pas démontré complet, la route ne peut pas être OUI.
+`stream_scope_state` :
+- COMPLETE
+- UNRESOLVED
 
-L'architecture doit être extensible.
+## Upstream Coverage Assessment
 
-## Compliance Engine
+Pour une filière applicable, le moteur doit relier :
 
-Le moteur évalue, **par route × marché cible × filière** :
-- filière applicable ;
-- entité potentiellement responsable ;
-- enregistrement officiel ;
-- éventuelle inscription propre déjà valide du vendeur ;
-- applicabilité de la couverture amont ;
-- route physique connue ou déduite ;
-- qualité et fraîcheur des preuves.
+```text
+produit
+→ marque / fabricant / entité amont
+→ rôle réglementaire pertinent
+→ registre officiel du marché cible
+→ numéro / enregistrement
+→ scope de l'enregistrement
+→ couverture du produit / catégorie / marque
+```
+
+Un numéro officiel peut être vérifié tout en laissant la couverture produit UNPROVEN.
+
+Seul `UPSTREAM_VERIFIED` permet un OUI sur une filière applicable.
+
+## Verdict
+
+Sortie utilisateur :
+- OUI
+- NON
 
 États internes :
 - VERIFIED
@@ -167,49 +147,23 @@ Le moteur évalue, **par route × marché cible × filière** :
 - NON_COMPLIANT
 - CONTRADICTORY
 
-Sortie utilisateur :
-- OUI
-- NON
-
-Un verdict global peut exister comme agrégat, mais ne remplace jamais les résultats détaillés.
+Agrégation :
+- NOT_APPLICABLE => OUI pour la filière ;
+- APPLICABLE + UPSTREAM_VERIFIED => OUI ;
+- APPLICABLE + autre statut => NON ;
+- UNRESOLVED => NON ;
+- scope global UNRESOLVED => overall NON ;
+- overall OUI uniquement si toutes les filières V1 sont OUI.
 
 ## API
-
-### Endpoint principal
 
 ```http
 POST /api/v1/analyses
 ```
 
-En V1, une requête porte sur **une seule marketplace cible**. Le dashboard ou Solenda répète l'appel pour plusieurs marketplaces ; un batch pourra être ajouté ultérieurement.
+Une requête V1 cible une marketplace.
 
-Le **contrat normatif unique** de requête et de réponse est défini dans `docs/CDC_V1.md`, section « Contrat API V1 de référence ». Ce document d'architecture ne maintient pas un second schéma JSON afin d'éviter toute divergence documentaire.
-
-Invariants d'architecture :
-- toutes les filières V1 sont présentes dans `streams[]` pour chaque route ;
-- une applicabilité UNRESOLVED empêche un OUI ;
-- un `stream_scope_state` UNRESOLVED empêche un OUI ;
-- les routes utilisent des segments ordonnés et typés ;
-- un prep center généré référence un centre réellement disponible via `prep_center_id` ;
-- un transit sans prep center peut être représenté par `TRANSIT` ;
-- un scénario de stockage FBA distinct produit une route candidate distincte ;
-- `internal_state`, `applicability` et `stream_scope_state` restent techniques ;
-- `overall_verdict = OUI` signifie qu'au moins une route complète est favorable pour la marketplace demandée.
-
-## Sémantique de NON
-
-Un NON dû à UNVERIFIED signifie :
-> le moteur ne peut pas démontrer que cette combinaison route × marché × filière évite un nouvel enregistrement.
-
-Cela ne constitue pas automatiquement :
-- une interdiction de vente ;
-- une preuve qu'une immatriculation est obligatoire ;
-- une conclusion juridique définitive.
-
-## Multi-tenant
-
-Le tenant vient du contexte d'authentification.
-Ne jamais faire confiance à un tenant_id libre fourni dans le body.
+Le contrat JSON normatif unique est dans `docs/CDC_V1.md`.
 
 ## Persistance
 
@@ -219,8 +173,6 @@ Entités principales :
 - users
 - client_profiles
 - client_vat_countries
-- user_prep_centers
-- seller_epr_registrations
 - products
 - product_identifiers
 - brands
@@ -231,18 +183,35 @@ Entités principales :
 - epr_registrations
 - product_epr_classifications
 - analyses
-- candidate_routes
-- route_market_stream_results
+- analysis_stream_results
+- registry_matches
 - evidence
 
-Ne pas créer en V1 un modèle de données excessivement détaillé pour des notions FBA non encore nécessaires au moteur.
+Supprimés du modèle V1 :
+- user_prep_centers
+- candidate_routes
+- route segments
+- FBA inventory scenarios
+- seller-owned EPR registration as positive path
 
 ## Cache
 
 - identifier → product
-- brand → entity graph
-- entity + country + stream → EPR registration
-- normalized route facts → result, avec invalidation par version de règle/source
+- brand/product → entity graph
+- entity + target market + stream → registration matches
+- normalized product/market facts → analysis result, versionné par règles/sources
+
+## UX contract
+
+L'API doit retourner assez d'information pour que l'interface affiche :
+- verdict immédiat ;
+- tous les numéros officiels pertinents trouvés ;
+- distinction « numéro vérifié » / « couverture produit vérifiée » ;
+- éléments validés même si overall NON ;
+- cause bloquante en français ;
+- preuves/sources.
+
+Les codes internes restent en anglais.
 
 ## Stack
 
