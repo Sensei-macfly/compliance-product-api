@@ -1,176 +1,140 @@
 # Décisions produit — V1
 
-Ce document fixe les décisions validées afin d'éviter les dérives de scope.
+Ce document fixe les décisions validées.
 
 ## Positionnement
 
-- Le projet est un **MVP autonome de compliance REP/EPR**.
-- Il **ne doit pas devenir une plateforme de sourcing**.
-- Solenda reste la plateforme de sourcing.
-- Le moteur est **API-first**.
-- Le dashboard autonome et Solenda appellent le même moteur.
-- Le moteur doit être multi-client / multi-tenant.
+- MVP autonome de compliance REP/EPR.
+- Pas de plateforme de sourcing.
+- Pas de moteur logistique.
+- API-first.
+- Dashboard autonome et Solenda utilisent le même moteur.
+- Multi-client / multi-tenant.
 
-## Principe central
+## Objectif favorable
 
-Le client fournit des **faits**. Le moteur produit les **déductions**.
+Le résultat favorable recherché est :
 
-Le client ne doit pas avoir à déclarer :
-- « je peux stocker en Allemagne » ;
-- « cette route est possible » ;
-- « je suis couvert REP dans ce pays ».
+> **couverture amont vérifiée dans le marché cible, permettant de ne pas faire reposer l'obligation REP propre sur le vendeur pour la filière analysée.**
 
-Le moteur doit générer les routes candidates à partir des faits disponibles et des règles documentées.
+Une immatriculation propre du vendeur n'est pas considérée comme le scénario favorable recherché par la V1.
 
-## Données persistantes du profil client
+## Entrées minimales
 
-Le profil contient principalement :
-- entité vendeuse ;
-- pays d'établissement ;
-- pays où le client dispose d'une immatriculation TVA ;
-- prep centers réellement disponibles ;
-- paramètres Amazon/FBA explicitement connus lorsqu'ils sont disponibles automatiquement ou transmis par Solenda ;
-- **immatriculations REP/EPR/IDU déjà détenues, lorsqu'elles existent et sont disponibles**.
+1. identifiant produit ;
+2. pays où le produit est physiquement stocké chez le fournisseur ;
+3. marketplace cible.
 
-Les immatriculations REP/EPR existantes sont **facultatives et non centrales dans l'UX V1**, mais le moteur doit pouvoir les exploiter pour déterminer qu'aucune **nouvelle** inscription n'est nécessaire lorsqu'une inscription propre, valide et applicable existe déjà.
+Le pays de stock fournisseur n'est pas :
+- le pays de facture ;
+- le pays du siège du fournisseur ;
+- une supposition.
 
-La TVA est une donnée de profil utile, mais :
-- elle ne prouve pas la conformité REP/EPR ;
-- elle ne prouve pas à elle seule qu'un stockage FBA est possible ;
-- elle ne doit pas servir de raccourci réglementaire.
+## Suppression du concept de route V1
 
-## Données transactionnelles
+La V1 ne construit plus de route logistique.
 
-À chaque analyse, fournir ou enrichir :
-- EAN / GTIN / UPC / ASIN ;
-- données produit disponibles ;
-- pays de sourcing / pays réel du stock fournisseur ;
-- marketplace cible ;
-- fournisseur lorsque connu.
-
-Solenda pourra transmettre ces informations directement via l'API.
-
-## Routes
-
-Le moteur génère les routes candidates raisonnables à partir :
-- du pays de stock fournisseur ;
-- des prep centers réellement disponibles ;
-- de la marketplace cible ;
-- des faits Amazon/FBA explicitement connus ;
-- des règles et contraintes documentées.
-
-Ne pas coder une route unique.
-Ne pas demander au client de construire lui-même le trajet.
-Ne pas croiser arbitrairement tous les pays sans règle ou donnée justificative.
-
-Le modèle doit toujours préserver séparément :
-- stock fournisseur ;
-- transit simple ;
+Supprimés :
 - prep center ;
-- stock FBA ;
-- marketplace cible.
+- transit ;
+- route segments ;
+- pays FBA supposé ;
+- scénario de stockage FBA ;
+- prédiction Amazon.
 
-Un prep center doit être référencé par un identifiant du profil client. Un transit sans prep center doit pouvoir être représenté séparément.
+Le moteur ne doit pas essayer de deviner ce qu'Amazon fera du stock.
+
+## Hypothèse produit
+
+V1 :
+- produit inchangé ;
+- emballage commercial d'origine ;
+- pas de bundle ;
+- pas de reconditionnement ;
+- pas de modification d'emballage.
+
+Bundle / repackaging / prep center à impact réglementaire : V2.
 
 ## Granularité du résultat
 
-La décision doit être calculée au minimum par :
+> **marché cible × filière**
 
-> **route × marché cible × filière**
+Filières V1 :
+- PACKAGING
+- EEE/WEEE
+- BATTERY
 
-Un verdict global éventuel n'est qu'un résumé. Il ne doit jamais masquer les résultats détaillés.
+Chaque filière est toujours représentée.
 
-Pour un produit multi-filières, une route ne peut être favorable que si toutes les filières applicables requises sont favorablement résolues.
+`applicability = APPLICABLE | NOT_APPLICABLE | UNRESOLVED`.
 
-Pour éviter tout faux OUI par omission, chaque route doit contenir une entrée pour chacune des filières V1 (PACKAGING, EEE/WEEE, BATTERY) avec `applicability = APPLICABLE | NOT_APPLICABLE | UNRESOLVED`. Une filière UNRESOLVED ou un périmètre global de filières non résolu force NON.
+Une applicabilité non résolue force NON.
 
-## UX autonome
-
-L'analyse autonome doit rester simple.
-
-Cible V1 :
-1. identifiant produit ;
-2. pays de sourcing / stock fournisseur ;
-3. marketplace cible.
-
-Une requête d'analyse porte sur une seule marketplace cible en V1. Les analyses multi-marchés sont obtenues par orchestration de plusieurs appels.
-
-Les autres données doivent venir :
-- du profil client ;
-- des providers ;
-- de Solenda ;
-- ou être demandées uniquement lorsqu'elles sont réellement nécessaires.
-
-## Verdict
-
-L'utilisateur voit uniquement :
-- **OUI**
-- **NON**
-
-Cette convention doit être utilisée uniformément dans les documents, l'API V1 et le dashboard.
-
-Les états internes peuvent être :
-- VERIFIED
-- UNVERIFIED
-- NON_COMPLIANT
-- CONTRADICTORY
-
-Un **NON** lié à un manque de preuves signifie seulement que le moteur ne peut pas démontrer que la route peut être poursuivie sans nouvel enregistrement.
-
-Il ne signifie pas automatiquement :
-- que la vente est juridiquement interdite ;
-- que le vendeur doit certainement s'enregistrer ;
-- qu'une non-conformité juridique est établie.
-
-Aucun score de confiance visible.
-
-## Amazon
-
-- Amazon SP-API est facultative.
-- Le moteur doit fonctionner sans compte Amazon Professional.
-- Les données Amazon peuvent enrichir l'analyse.
-- Amazon ne constitue jamais une preuve juridique REP/EPR.
-- Le moteur ne doit pas exiger que l'utilisateur renseigne manuellement un « pays FBA possible » s'il peut le déduire ou si cette donnée n'est pas nécessaire à la règle évaluée.
-
-## Responsabilité REP
+## Couverture
 
 Ne jamais appliquer :
 
 ```text
-numéro REP trouvé = produit couvert
+numéro trouvé = produit couvert
 ```
 
 Le moteur doit distinguer :
-1. produit identifié ;
-2. marque / fabricant / titulaire identifiés ;
-3. entité juridique locale résolue ;
-4. enregistrement officiel vérifié ;
-5. lien entre l'entité, la filière, le produit et le marché ;
-6. applicabilité à la route analysée ;
-7. inscription propre déjà valide du vendeur, lorsqu'elle existe.
+1. numéro trouvé ;
+2. titulaire du numéro ;
+3. pays ;
+4. filière / catégorie ;
+5. validité ;
+6. relation avec le produit / marque ;
+7. applicabilité au marché cible ;
+8. couverture amont démontrée ou non.
 
-## Gate avant tout OUI réel
+## Verdict
 
-Aucun OUI réel ne doit être produit pour une combinaison pays × filière × rôle tant que :
-- la règle applicable n'est pas documentée ;
-- la source ou preuve utilisée n'est pas auditée ;
-- le comportement en cas de données manquantes n'est pas testé ;
-- des cas négatifs et ambigus n'ont pas été couverts.
+Utilisateur :
+- OUI
+- NON
 
-Le gate doit aussi empêcher le cas trivial d'un moteur qui retourne toujours NON : pour chaque combinaison pays × filière × rôle activée, le corpus contient au minimum 3 cas positifs indépendamment revus et 3 cas négatifs/ambigus, et le moteur doit reconnaître 100 % des cas positifs du corpus activé.
+OUI sur une filière applicable uniquement avec `UPSTREAM_COVERAGE_VERIFIED`.
 
-Cas minimaux à tester :
-- pays FBA inconnu ;
-- entité amont non résolue ;
-- REP amont trouvée mais non liée au produit ;
-- registre officiel indisponible ;
-- produit multi-filières ;
-- même GTIN vers plusieurs marchés ;
-- plusieurs routes vers un même marché ;
-- couverture amont valide ;
-- inscription propre déjà valide ;
-- preuve insuffisante.
+Overall OUI uniquement si toutes les filières V1 sont OUI et le scope est complet.
+
+Un NON lié à l'incertitude ne signifie pas automatiquement vente interdite ou obligation certaine de s'enregistrer.
+
+## Interface
+
+Le verdict doit être immédiatement visible.
+
+Même en cas de NON :
+- afficher tous les numéros officiels pertinents trouvés ;
+- afficher les éléments déjà validés ;
+- mettre en évidence le point bloquant ou à vérifier.
+
+Les messages utilisateur sont en français.
+
+Les reason codes et états techniques restent en anglais.
+
+## Amazon
+
+- Amazon SP-API facultative.
+- Enrichissement produit uniquement en V1.
+- Aucun pays FBA requis.
+- Aucun shipment plan requis.
+- Aucune prédiction de stockage Amazon.
+
+## Gate avant OUI réel
+
+Par combinaison pays × filière × rôle activée :
+- règle documentée ;
+- source auditée ;
+- corpus figé ;
+- 0 faux OUI ;
+- 100 % des OUI traçables ;
+- minimum 3 cas positifs indépendamment revus ;
+- minimum 3 cas négatifs/ambigus ;
+- 100 % des cas positifs de référence reconnus.
+
+Ce seuil est un minimum de pilote, à augmenter avant extension.
 
 ## V1 ≠ avis juridique
 
-L'application produit une **pré-validation automatisée, conservatrice et traçable**, pas un avis juridique définitif.
+Le moteur produit une pré-validation conservatrice, explicable et traçable.
