@@ -23,7 +23,12 @@ Une immatriculation propre du vendeur n'est pas considérée comme le scénario 
 
 1. identifiant produit ;
 2. pays où le produit est physiquement stocké chez le fournisseur ;
-3. marketplace cible.
+3. marketplace cible ;
+4. `product_handling_mode`.
+
+Dans le dashboard, cela reste **3 champs + 1 confirmation explicite**.
+
+`ORIGINAL_UNMODIFIED` ne doit jamais être présélectionné ou ajouté silencieusement par le backend. Champ absent ou UNKNOWN => NON/UNVERIFIED.
 
 Le pays de stock fournisseur n'est pas :
 - le pays de facture ;
@@ -59,15 +64,18 @@ La V1 reste donc fail-closed sur les faits réglementaires requis.
 ## Hypothèse produit
 
 V1 :
+- `product_handling_mode = ORIGINAL_UNMODIFIED` explicitement confirmé ;
 - produit inchangé ;
 - emballage commercial d'origine ;
 - pas de bundle ;
 - pas de reconditionnement ;
 - pas de modification d'emballage.
 
+Valeurs `BUNDLED`, `REPACKAGED`, `UNKNOWN` ou champ absent => NON/UNVERIFIED.
+
 Bundle / repackaging / prep center à impact réglementaire : V2.
 
-Si un cas analysé est connu comme contraire à cette hypothèse V1, il est traité comme hors scope/UNVERIFIED et ne peut pas obtenir OUI.
+L'absence d'information ne vaut jamais confirmation. Si une règle exige une preuve plus forte que l'attestation V1, cette preuve doit être obtenue avant OUI.
 
 ## Granularité du résultat
 
@@ -108,7 +116,9 @@ Utilisateur :
 - OUI
 - NON
 
-OUI sur une filière applicable uniquement avec `UPSTREAM_COVERAGE_VERIFIED`.
+OUI sur une filière applicable uniquement avec `UPSTREAM_COVERAGE_VERIFIED` **et une chaîne `evidence[]` non vide et traçable**.
+
+`APPLICABLE + OUI + evidence=[]` est interdit.
 
 Overall OUI uniquement si toutes les filières V1 sont OUI et le scope est complet.
 
