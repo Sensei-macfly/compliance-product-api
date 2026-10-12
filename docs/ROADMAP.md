@@ -27,6 +27,8 @@ Avant d'autoriser un OUI réel :
 - [ ] corpus de référence figé avant évaluation ;
 - [ ] 0 faux OUI sur ce corpus pour le périmètre activé ;
 - [ ] 100 % des OUI avec chaîne de preuve traçable ;
+- [ ] au moins 3 cas positifs indépendamment revus et 3 cas négatifs/ambigus par combinaison pays × filière × rôle activée ;
+- [ ] 100 % des cas positifs de référence reconnus comme OUI dans le périmètre activé ;
 - [ ] chaîne de preuve documentée ;
 - [ ] règle pays × filière × rôle documentée ;
 - [ ] données minimales nécessaires définies ;
@@ -115,7 +117,9 @@ Entrées :
 
 Le moteur :
 - [ ] génère les routes candidates raisonnables ;
-- [ ] distingue stock fournisseur, prep/transit, stock FBA et marketplace ;
+- [ ] distingue stock fournisseur, transit simple, prep center, stock FBA et marketplace ;
+- [ ] représente TRANSIT indépendamment d'un prep center ;
+- [ ] référence chaque prep center généré par un prep_center_id du profil ;
 - [ ] ne demande pas au client de construire la route ;
 - [ ] n'infère pas un pays FBA uniquement depuis la TVA ;
 - [ ] ne produit pas un produit cartésien arbitraire ;
@@ -128,6 +132,9 @@ Le moteur :
 - [ ] existing seller registration assessment
 - [ ] local entity resolution
 - [ ] résultats par route × marché × filière
+- [ ] streams[] exhaustif sur PACKAGING / EEE-WEEE / BATTERY
+- [ ] applicability APPLICABLE / NOT_APPLICABLE / UNRESOLVED
+- [ ] stream_scope_state COMPLETE / UNRESOLVED
 - [ ] OUI/NON
 - [ ] reason codes
 - [ ] missing_context
