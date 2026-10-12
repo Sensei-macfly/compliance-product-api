@@ -56,9 +56,10 @@ Le profil persistant contient principalement :
 - pays d'établissement ;
 - pays où le client dispose d'une immatriculation TVA ;
 - prep centers réellement disponibles ;
-- faits Amazon/FBA explicitement connus lorsqu'ils sont disponibles.
+- faits Amazon/FBA explicitement connus lorsqu'ils sont disponibles ;
+- immatriculations REP/EPR/IDU déjà détenues lorsqu'elles existent et sont disponibles.
 
-Les enregistrements REP/EPR déjà détenus par le client ne sont pas une donnée centrale de la V1.
+Les enregistrements REP/EPR déjà détenus par le client sont **facultatifs et non centraux dans l'UX V1**, mais le moteur doit pouvoir les exploiter pour déterminer qu'aucune **nouvelle** inscription n'est nécessaire lorsqu'une inscription propre est valide et applicable.
 
 Objectif principal : identifier les routes qui évitent une nouvelle immatriculation.
 
@@ -205,7 +206,10 @@ Il doit :
 - ne pas exiger que l'utilisateur choisisse lui-même la route ;
 - ne pas déduire un pays FBA depuis la seule TVA ;
 - ne pas produire toutes les permutations de pays ;
-- conserver les informations manquantes comme état interne UNVERIFIED.
+- conserver les informations manquantes comme état interne UNVERIFIED ;
+- préserver distinctement le stock fournisseur, chaque segment de transit/prep, le stock FBA et la marketplace cible.
+
+Une route possède un `route_id` stable dans l'analyse et une liste ordonnée de `segments`. Un trajet peut donc contenir zéro, un ou plusieurs prep centers sans changer le contrat API.
 
 ## 15. Verdict
 
@@ -222,6 +226,8 @@ Sortie utilisateur :
 OUI nécessite une chaîne de preuves suffisante.
 
 NON couvre tous les autres cas mais doit être expliqué.
+
+Un NON causé par UNVERIFIED signifie seulement que le moteur ne peut pas démontrer que la combinaison évaluée évite un nouvel enregistrement. Il ne constitue pas automatiquement une interdiction de vente, la preuve qu'une immatriculation est obligatoire, ni une conclusion juridique définitive.
 
 Principe :
 > **UNKNOWN ≠ COMPLIANT**
@@ -273,6 +279,13 @@ Payload enrichi possible :
     "vat_countries": ["FR", "DE"],
     "prep_centers": [
       {"country": "FR"}
+    ],
+    "existing_epr_registrations": [
+      {
+        "country": "DE",
+        "stream": "PACKAGING",
+        "registration_number": "OPTIONAL"
+      }
     ]
   }
 }
@@ -280,20 +293,62 @@ Payload enrichi possible :
 
 Les champs enrichis sont facultatifs.
 
-## 18. Réponse API
+## 18. Réponse API — contrat de référence
+
+Ce schéma est le **contrat de référence unique** pour la V1. L'Architecture doit rester alignée dessus.
+
+Valeurs utilisateur autorisées : `OUI` et `NON`.
 
 ```json
 {
   "analysis_id": "uuid",
-  "verdict": "NO",
-  "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE",
-  "missing_context": [],
-  "routes": [],
-  "evidence": []
+  "overall_verdict": "OUI",
+  "routes": [
+    {
+      "route_id": "route-1",
+      "route_verdict": "OUI",
+      "segments": [
+        {"type": "SUPPLIER_STOCK", "country": "IT"},
+        {"type": "PREP_CENTER", "country": "FR"},
+        {"type": "FBA_INVENTORY", "country": "DE"},
+        {"type": "MARKETPLACE", "country": "DE"}
+      ],
+      "target_marketplace": "DE",
+      "streams": [
+        {
+          "stream": "PACKAGING",
+          "verdict": "OUI",
+          "internal_state": "VERIFIED",
+          "reason_codes": ["ALL_REQUIRED_STREAMS_VERIFIED"],
+          "missing_context": [],
+          "evidence": []
+        },
+        {
+          "stream": "EEE",
+          "verdict": "OUI",
+          "internal_state": "VERIFIED",
+          "reason_codes": ["UPSTREAM_COVERAGE_VERIFIED"],
+          "missing_context": [],
+          "evidence": []
+        }
+      ]
+    }
+  ]
 }
 ```
 
-Le même moteur doit répondre au dashboard autonome et à Solenda.
+### Règles d'agrégation
+
+- `stream.verdict = OUI` uniquement si cette filière est favorablement vérifiée.
+- `route_verdict = OUI` uniquement si **toutes les filières applicables requises** de cette route sont `OUI`.
+- `overall_verdict = OUI` si **au moins une route candidate** vers le ou les marchés demandés possède `route_verdict = OUI`.
+- sinon `overall_verdict = NON`.
+
+Le verdict global répond donc à la question métier : **« existe-t-il au moins une route démontrée permettant de poursuivre sans nouvel enregistrement ? »**. Il ne signifie pas que toutes les routes sont favorables.
+
+`internal_state` est un champ technique destiné à l'audit, aux logs et aux vues de diagnostic. Il ne doit jamais être présenté comme une troisième décision commerciale à côté de OUI/NON.
+
+Le même moteur et ce même contrat doivent répondre au dashboard autonome et à Solenda.
 
 ## 19. Reason codes minimaux
 
@@ -340,6 +395,7 @@ Tables principales :
 - client_profiles
 - client_vat_countries
 - user_prep_centers
+- seller_epr_registrations
 - products
 - product_identifiers
 - brands
@@ -351,7 +407,7 @@ Tables principales :
 - product_epr_classifications
 - analyses
 - candidate_routes
-- route_results
+- route_market_stream_results
 - evidence
 
 ## 22. Règles minimales
@@ -379,6 +435,17 @@ Ne pas implémenter :
 - avis juridique définitif.
 
 ## 24. Critères d'acceptation
+
+### Gate mesurable avant activation de vrais OUI
+
+Avant d'activer des OUI réels pour une combinaison pays × filière × rôle :
+- le corpus de référence correspondant doit être figé avant l'évaluation ;
+- **0 faux OUI** est toléré sur ce corpus ;
+- **100 % des OUI** doivent avoir une chaîne de preuve traçable jusqu'aux sources et à la version de règle utilisées ;
+- les cas de source indisponible, preuve amont incomplète et donnée FBA requise manquante doivent produire NON/UNVERIFIED ;
+- les seuils et le corpus doivent être documentés avant leur utilisation, afin de ne pas être ajustés après observation des résultats.
+
+La couverture peut être faible en V1 : mieux vaut retourner NON/UNVERIFIED que produire un OUI insuffisamment prouvé.
 
 La V1 est fonctionnelle si :
 1. elle accepte un identifiant produit ;
