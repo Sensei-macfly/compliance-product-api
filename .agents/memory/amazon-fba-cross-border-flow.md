@@ -13,7 +13,10 @@ Persistent client facts can include:
 - seller legal entity and establishment country;
 - VAT-registration countries;
 - prep centers actually available;
-- optional Amazon/FBA facts explicitly known from Solenda, Amazon or another reliable source.
+- optional Amazon/FBA facts explicitly known from Solenda, Amazon or another reliable source;
+- optional existing seller EPR/REP/IDU registrations.
+
+Existing seller EPR registrations are not a central UX requirement, but the engine must support and use them when available to determine whether a new registration is actually needed.
 
 Per-analysis facts include:
 - EAN/GTIN/UPC/ASIN;
@@ -23,7 +26,7 @@ Per-analysis facts include:
 
 Do not ask the client to declare which FBA countries are "possible" as a guess. Do not require the client to manually construct a route. Generate reasonable candidate routes from facts and documented rules.
 
-Existing seller EPR registrations are not a central V1 input because the product's primary goal is to identify routes that avoid requiring a new EPR/REP/IDU registration. The model may remain extensible for existing registrations later.
+Keep supplier stock, prep/transit, FBA inventory country and target marketplace as separate route facts.
 
 VAT-registration countries are context only. They do not prove FBA storage eligibility, EPR compliance, or upstream coverage.
 
@@ -31,6 +34,12 @@ Amazon SP-API is optional. The engine must work without a Professional Amazon ac
 
 The dashboard and Solenda must call the same business API. Solenda may provide richer facts, but the compliance engine must not read the Solenda database directly.
 
-User-facing output is binary YES/NO. Internal states may be VERIFIED, UNVERIFIED, NON_COMPLIANT or CONTRADICTORY. UNKNOWN is never treated as compliant.
+User-facing output is uniformly **OUI/NON**. Internal states may be VERIFIED, UNVERIFIED, NON_COMPLIANT or CONTRADICTORY.
+
+Results must be represented at least at **route × target market × EPR stream** granularity. A global verdict may exist only as a summary.
+
+UNKNOWN is never treated as compliant.
+
+A NON caused by missing evidence means the engine cannot prove that the route avoids a new registration. It does not automatically mean the sale is legally prohibited or that seller registration is definitively required.
 
 An upstream EPR/IDU number is never enough by itself to prove coverage of the seller, product/SKU, category, market or route.
