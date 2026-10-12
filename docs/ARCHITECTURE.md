@@ -88,9 +88,19 @@ Le générateur ne doit :
 
 Le modèle préserve distinctement :
 - supplier stock ;
-- prep/transit ;
+- transit simple ;
+- prep center ;
 - FBA inventory country ;
 - target marketplace.
+
+Types de segments V1 :
+- `SUPPLIER_STOCK`
+- `TRANSIT`
+- `PREP_CENTER`
+- `FBA_INVENTORY`
+- `MARKETPLACE`
+
+Les segments sont ordonnés. `TRANSIT` et `PREP_CENTER` peuvent être répétés. Un segment `PREP_CENTER` doit référencer un `prep_center_id` du profil client, pas seulement un pays.
 
 Une route peut être partielle si certains faits sont inconnus. Dans ce cas, le moteur conserve l'état interne UNVERIFIED et retourne NON à l'utilisateur si l'information manquante est nécessaire à la décision.
 
@@ -126,10 +136,17 @@ Distinguer :
 
 ## EPR Classification
 
-Minimum V1 :
+Univers minimum V1 :
 - PACKAGING
 - EEE/WEEE
 - BATTERY
+
+Pour chaque route, toutes les filières de cet univers sont représentées dans `streams[]` avec un état d'applicabilité :
+- APPLICABLE
+- NOT_APPLICABLE
+- UNRESOLVED
+
+Une filière UNRESOLVED force NON. Le moteur conserve aussi un `stream_scope_state` au niveau de la route ; si le périmètre global des filières n'est pas démontré complet, la route ne peut pas être OUI.
 
 L'architecture doit être extensible.
 
@@ -164,98 +181,20 @@ Un verdict global peut exister comme agrégat, mais ne remplace jamais les résu
 POST /api/v1/analyses
 ```
 
-Le même endpoint accepte un payload minimal ou enrichi.
+En V1, une requête porte sur **une seule marketplace cible**. Le dashboard ou Solenda répète l'appel pour plusieurs marketplaces ; un batch pourra être ajouté ultérieurement.
 
-Exemple minimal :
+Le **contrat normatif unique** de requête et de réponse est défini dans `docs/CDC_V1.md`, section « Contrat API V1 de référence ». Ce document d'architecture ne maintient pas un second schéma JSON afin d'éviter toute divergence documentaire.
 
-```json
-{
-  "identifier": "4006381333931",
-  "supplier_stock_country": "IT",
-  "target_marketplace": "DE"
-}
-```
-
-Exemple enrichi depuis Solenda :
-
-```json
-{
-  "identifier": "4006381333931",
-  "supplier_stock_country": "IT",
-  "target_marketplace": "DE",
-  "product": {
-    "asin": "B0XXXX",
-    "brand": "Example",
-    "category": "Electric Toothbrush"
-  },
-  "supplier": {
-    "legal_name": "Example Supplier",
-    "country": "IT"
-  },
-  "account_context": {
-    "seller_country": "FR",
-    "vat_countries": ["FR", "DE"],
-    "prep_centers": [
-      {"country": "FR"}
-    ],
-    "existing_epr_registrations": [
-      {
-        "country": "DE",
-        "stream": "PACKAGING",
-        "registration_number": "OPTIONAL"
-      }
-    ]
-  },
-  "amazon_context": {
-    "inventory_countries": ["DE"]
-  }
-}
-```
-
-Les champs enrichis sont facultatifs.
-
-## Réponse
-
-Le contrat API canonique est défini dans `docs/CDC_V1.md` et doit rester identique ici.
-
-```json
-{
-  "analysis_id": "uuid",
-  "overall_verdict": "OUI",
-  "routes": [
-    {
-      "route_id": "route-1",
-      "route_verdict": "OUI",
-      "segments": [
-        {"type": "SUPPLIER_STOCK", "country": "IT"},
-        {"type": "PREP_CENTER", "country": "FR"},
-        {"type": "FBA_INVENTORY", "country": "DE"},
-        {"type": "MARKETPLACE", "country": "DE"}
-      ],
-      "target_marketplace": "DE",
-      "streams": [
-        {
-          "stream": "PACKAGING",
-          "verdict": "OUI",
-          "internal_state": "VERIFIED",
-          "reason_codes": ["ALL_REQUIRED_STREAMS_VERIFIED"],
-          "missing_context": [],
-          "evidence": []
-        }
-      ]
-    }
-  ]
-}
-```
-
-Agrégation :
-- une filière est OUI uniquement si elle est favorablement vérifiée ;
-- une route est OUI uniquement si toutes ses filières applicables requises sont OUI ;
-- `overall_verdict` est OUI si au moins une route candidate possède `route_verdict = OUI`, sinon NON.
-
-Le verdict global signifie donc « au moins une route démontrée existe » et non « toutes les routes sont favorables ».
-
-`internal_state` est purement technique et ne doit pas apparaître comme une troisième décision commerciale dans l'interface utilisateur.
+Invariants d'architecture :
+- toutes les filières V1 sont présentes dans `streams[]` pour chaque route ;
+- une applicabilité UNRESOLVED empêche un OUI ;
+- un `stream_scope_state` UNRESOLVED empêche un OUI ;
+- les routes utilisent des segments ordonnés et typés ;
+- un prep center généré référence un centre réellement disponible via `prep_center_id` ;
+- un transit sans prep center peut être représenté par `TRANSIT` ;
+- un scénario de stockage FBA distinct produit une route candidate distincte ;
+- `internal_state`, `applicability` et `stream_scope_state` restent techniques ;
+- `overall_verdict = OUI` signifie qu'au moins une route complète est favorable pour la marketplace demandée.
 
 ## Sémantique de NON
 
