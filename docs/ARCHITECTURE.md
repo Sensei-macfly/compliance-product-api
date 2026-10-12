@@ -35,6 +35,8 @@ Si la détermination du rôle, de l'applicabilité ou de la couverture nécessit
 
 Aucun pays FBA, rôle d'importateur, première mise sur le marché, absence de reconditionnement ou autre fait favorable ne peut être inventé pour permettre OUI.
 
+`product_handling_mode` fait partie des faits transactionnels de sécurité. `ORIGINAL_UNMODIFIED` doit venir d'une attestation explicite ou d'un fait fiable et ne possède aucun défaut favorable. Valeur absente/UNKNOWN/BUNDLED/REPACKAGED => pas de OUI V1.
+
 Le cœur d'analyse est :
 
 ```text
@@ -73,6 +75,7 @@ Les immatriculations REP propres du vendeur ne sont pas une voie positive recher
 - identifier ;
 - supplier stock country ;
 - target marketplace ;
+- product handling mode ;
 - optional supplier identity ;
 - optional enriched product attributes.
 
@@ -148,7 +151,7 @@ Un numéro officiel peut être vérifié tout en laissant la couverture produit 
 
 Seul `UPSTREAM_VERIFIED` permet un OUI sur une filière applicable.
 
-`UPSTREAM_VERIFIED` n'est atteignable que si tous les faits requis par la règle activée sont établis. Si une règle nécessite un fait logistique/rôle exclu du modèle V1 et que ce fait n'est pas prouvé, la couverture reste UNPROVEN/UNRESOLVED.
+`UPSTREAM_VERIFIED` n'est atteignable que si tous les faits requis par la règle activée sont établis et si la chaîne `evidence[]` est non vide et traçable. Une filière APPLICABLE avec OUI et `evidence=[]` est invalide par contrat. Si une règle nécessite un fait logistique/rôle exclu du modèle V1 et que ce fait n'est pas prouvé, la couverture reste UNPROVEN/UNRESOLVED.
 
 ## Verdict
 
