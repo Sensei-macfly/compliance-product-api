@@ -65,9 +65,12 @@ Ne pas croiser arbitrairement tous les pays sans règle ou donnée justificative
 
 Le modèle doit toujours préserver séparément :
 - stock fournisseur ;
-- transit / prep center ;
+- transit simple ;
+- prep center ;
 - stock FBA ;
 - marketplace cible.
+
+Un prep center doit être référencé par un identifiant du profil client. Un transit sans prep center doit pouvoir être représenté séparément.
 
 ## Granularité du résultat
 
@@ -79,6 +82,8 @@ Un verdict global éventuel n'est qu'un résumé. Il ne doit jamais masquer les 
 
 Pour un produit multi-filières, une route ne peut être favorable que si toutes les filières applicables requises sont favorablement résolues.
 
+Pour éviter tout faux OUI par omission, chaque route doit contenir une entrée pour chacune des filières V1 (PACKAGING, EEE/WEEE, BATTERY) avec `applicability = APPLICABLE | NOT_APPLICABLE | UNRESOLVED`. Une filière UNRESOLVED ou un périmètre global de filières non résolu force NON.
+
 ## UX autonome
 
 L'analyse autonome doit rester simple.
@@ -87,6 +92,8 @@ Cible V1 :
 1. identifiant produit ;
 2. pays de sourcing / stock fournisseur ;
 3. marketplace cible.
+
+Une requête d'analyse porte sur une seule marketplace cible en V1. Les analyses multi-marchés sont obtenues par orchestration de plusieurs appels.
 
 Les autres données doivent venir :
 - du profil client ;
@@ -149,6 +156,8 @@ Aucun OUI réel ne doit être produit pour une combinaison pays × filière × r
 - la source ou preuve utilisée n'est pas auditée ;
 - le comportement en cas de données manquantes n'est pas testé ;
 - des cas négatifs et ambigus n'ont pas été couverts.
+
+Le gate doit aussi empêcher le cas trivial d'un moteur qui retourne toujours NON : pour chaque combinaison pays × filière × rôle activée, le corpus contient au minimum 3 cas positifs indépendamment revus et 3 cas négatifs/ambigus, et le moteur doit reconnaître 100 % des cas positifs du corpus activé.
 
 Cas minimaux à tester :
 - pays FBA inconnu ;
