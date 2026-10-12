@@ -61,6 +61,7 @@ Ce projet **n'est pas une plateforme de sourcing**. Solenda reste la plateforme 
 - [Décisions produit](docs/DECISIONS.md)
 - [Sources et APIs](docs/SOURCES_APIS.md)
 - [Roadmap MVP](docs/ROADMAP.md)
+- [Collaboration & source de vérité](docs/COLLABORATION.md)
 
 ## Statut
 
