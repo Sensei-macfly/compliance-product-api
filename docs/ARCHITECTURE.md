@@ -35,6 +35,8 @@ Route Generator
         ↓
 Country / Supply-chain Rules
         ↓
+Résultats route × marché × filière
+        ↓
 OUI / NON
         ↓
 Reasons + Evidence
@@ -47,12 +49,14 @@ Persistants :
 - country of establishment ;
 - VAT registration countries ;
 - available prep centers ;
-- optional Amazon/FBA facts explicitly known.
+- optional Amazon/FBA facts explicitly known ;
+- optional existing seller EPR/REP/IDU registrations.
 
 Important :
 - le profil décrit des faits ;
 - il ne contient pas une liste déclarative de pays « où je peux vendre/stocker » ;
-- le moteur produit cette conclusion.
+- le moteur produit cette conclusion ;
+- les immatriculations REP existantes sont facultatives, mais exploitables lorsqu'elles existent.
 
 ## Faits transactionnels
 
@@ -73,13 +77,20 @@ Exemple conceptuel :
 ```text
 Supplier stock IT
 → Prep FR
-→ FBA/marketplace DE
+→ FBA DE
+→ Marketplace DE
 ```
 
 Le générateur ne doit :
 - ni coder un trajet unique ;
 - ni générer un produit cartésien arbitraire de tous les pays ;
 - ni exiger que le client construise lui-même la route.
+
+Le modèle préserve distinctement :
+- supplier stock ;
+- prep/transit ;
+- FBA inventory country ;
+- target marketplace.
 
 Une route peut être partielle si certains faits sont inconnus. Dans ce cas, le moteur conserve l'état interne UNVERIFIED et retourne NON à l'utilisateur si l'information manquante est nécessaire à la décision.
 
@@ -124,13 +135,14 @@ L'architecture doit être extensible.
 
 ## Compliance Engine
 
-Le moteur évalue :
-- pays / marché cible ;
-- filières applicables ;
+Le moteur évalue, **par route × marché cible × filière** :
+- filière applicable ;
 - entité potentiellement responsable ;
-- enregistrements officiels ;
+- enregistrement officiel ;
+- éventuelle inscription propre déjà valide du vendeur ;
 - applicabilité de la couverture amont ;
-- route physique connue ou déduite.
+- route physique connue ou déduite ;
+- qualité et fraîcheur des preuves.
 
 États internes :
 - VERIFIED
@@ -139,8 +151,10 @@ Le moteur évalue :
 - CONTRADICTORY
 
 Sortie utilisateur :
-- YES
-- NO
+- OUI
+- NON
+
+Un verdict global peut exister comme agrégat, mais ne remplace jamais les résultats détaillés.
 
 ## API
 
@@ -183,6 +197,13 @@ Exemple enrichi depuis Solenda :
     "vat_countries": ["FR", "DE"],
     "prep_centers": [
       {"country": "FR"}
+    ],
+    "existing_epr_registrations": [
+      {
+        "country": "DE",
+        "stream": "PACKAGING",
+        "registration_number": "OPTIONAL"
+      }
     ]
   },
   "amazon_context": {
@@ -193,24 +214,51 @@ Exemple enrichi depuis Solenda :
 
 Les champs enrichis sont facultatifs.
 
-Le moteur doit :
-- utiliser les données fournies ;
-- éviter de recalculer ce qui est déjà fiable ;
-- signaler les données manquantes réellement bloquantes ;
-- ne jamais faire dépendre son fonctionnement de Solenda.
-
 ## Réponse
 
 ```json
 {
   "analysis_id": "uuid",
-  "verdict": "NO",
-  "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE",
-  "missing_context": [],
-  "routes": [],
-  "evidence": []
+  "overall_verdict": "NON",
+  "routes": [
+    {
+      "supplier_stock_country": "IT",
+      "prep_country": "FR",
+      "fba_inventory_country": "DE",
+      "target_marketplace": "DE",
+      "streams": [
+        {
+          "stream": "PACKAGING",
+          "verdict": "OUI",
+          "internal_state": "VERIFIED",
+          "reason_codes": ["ALL_REQUIRED_EVIDENCE_VERIFIED"],
+          "evidence": []
+        },
+        {
+          "stream": "EEE",
+          "verdict": "NON",
+          "internal_state": "UNVERIFIED",
+          "reason_codes": ["INSUFFICIENT_OFFICIAL_EVIDENCE"],
+          "missing_context": [],
+          "evidence": []
+        }
+      ]
+    }
+  ]
 }
 ```
+
+Le verdict global est dérivé des résultats détaillés et n'est jamais leur substitut.
+
+## Sémantique de NON
+
+Un NON dû à UNVERIFIED signifie :
+> le moteur ne peut pas démontrer que cette combinaison route × marché × filière évite un nouvel enregistrement.
+
+Cela ne constitue pas automatiquement :
+- une interdiction de vente ;
+- une preuve qu'une immatriculation est obligatoire ;
+- une conclusion juridique définitive.
 
 ## Multi-tenant
 
@@ -226,6 +274,7 @@ Entités principales :
 - client_profiles
 - client_vat_countries
 - user_prep_centers
+- seller_epr_registrations
 - products
 - product_identifiers
 - brands
@@ -237,7 +286,7 @@ Entités principales :
 - product_epr_classifications
 - analyses
 - candidate_routes
-- route_results
+- route_market_stream_results
 - evidence
 
 Ne pas créer en V1 un modèle de données excessivement détaillé pour des notions FBA non encore nécessaires au moteur.
