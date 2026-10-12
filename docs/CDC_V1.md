@@ -55,6 +55,23 @@ La V1 ne modélise pas :
 
 Raison : au moment du sourcing et de l'achat, le pays de stockage FBA futur n'est généralement pas connu de manière fiable. Le moteur ne doit jamais l'inventer.
 
+### Règle de sécurité sur les faits exclus
+
+La suppression du modèle de route ne constitue **jamais** une autorisation à ignorer un fait juridiquement nécessaire.
+
+Pour chaque marché × filière, la règle activée doit déclarer les faits nécessaires pour déterminer :
+- le rôle réglementaire pertinent ;
+- l'applicabilité de la filière ;
+- la portée de la couverture amont.
+
+Si un de ces faits nécessaires dépend d'un élément hors périmètre V1 — par exemple importateur pertinent, première mise sur le marché, modification d'emballage, bundle/reconditionnement, ou fait logistique ayant un effet juridique — et que ce fait ne peut pas être établi avec les données/preuves disponibles :
+- le moteur ne suppose jamais la valeur favorable ;
+- la filière devient `UNVERIFIED` ou `UNRESOLVED` ;
+- son verdict est `NON` ;
+- l'overall verdict ne peut pas être `OUI`.
+
+La V1 peut omettre la **modélisation** d'une route ; elle ne peut pas omettre un **fait réglementaire requis** pour produire OUI.
+
 ## 5. Hypothèse produit V1
 
 La V1 suppose :
@@ -64,6 +81,8 @@ La V1 suppose :
 - pas de modification d'emballage susceptible de créer une nouvelle obligation.
 
 Ces cas sont réservés à une V2.
+
+Si le moteur apprend qu'un produit est bundlé, reconditionné ou que son emballage a été modifié contrairement à l'hypothèse V1, il ne doit pas continuer l'analyse comme si l'hypothèse était respectée : la conclusion favorable est bloquée et le résultat reste NON/UNVERIFIED jusqu'à une analyse prenant ce cas en charge.
 
 ## 6. Amazon
 
@@ -325,7 +344,8 @@ Cette section est la **source normative unique** du contrat V1.
 - `registration_status = VERIFIED` ne signifie pas `product_coverage_status = VERIFIED` ;
 - une filière UNRESOLVED force NON ;
 - un scope de filières UNRESOLVED force NON ;
-- l'immatriculation propre du vendeur n'est pas utilisée comme raccourci pour produire OUI.
+- l'immatriculation propre du vendeur n'est pas utilisée comme raccourci pour produire OUI ;
+- si la responsabilité, l'applicabilité ou la couverture dépend d'un fait réglementaire requis mais absent ou hors périmètre V1, le verdict concerné est NON/UNVERIFIED ; aucun fait favorable n'est supposé.
 
 ## 15. Reason codes minimaux
 
@@ -346,6 +366,8 @@ Codes internes en anglais :
 - TARGET_MARKET_RULE_NOT_VALIDATED
 - SUPPLIER_STOCK_COUNTRY_UNCERTAIN
 - INSUFFICIENT_OFFICIAL_EVIDENCE
+- REQUIRED_REGULATORY_FACT_MISSING
+- V1_SCOPE_ASSUMPTION_VIOLATED
 
 L'interface utilisateur affiche des explications en français et ne montre pas les codes bruts par défaut.
 
@@ -408,7 +430,9 @@ Pas de tables V1 pour :
 - numéro officiel trouvé seul => insuffisant ;
 - numéro d'un autre pays => insuffisant sauf règle explicitement documentée ;
 - achat / stock dans un pays ≠ couverture automatique dans le marché cible ;
-- une inscription propre du vendeur ≠ couverture amont favorable.
+- une inscription propre du vendeur ≠ couverture amont favorable ;
+- fait réglementaire requis absent ou hors périmètre V1 => NON/UNVERIFIED ;
+- hypothèse V1 connue comme fausse (bundle, reconditionnement, modification d'emballage) => NON/UNVERIFIED, jamais OUI par défaut.
 
 ## 19. Hors périmètre V1
 
@@ -455,4 +479,6 @@ La V1 est fonctionnelle si :
 11. les codes techniques restent en anglais ;
 12. dashboard et Solenda utilisent le même moteur et le même contrat ;
 13. Amazon SP-API n'est pas obligatoire ;
-14. le dashboard reste pleinement fonctionnel sans scroll horizontal sur iPhone et Android, avec les mêmes informations et actions essentielles que sur desktop.
+14. le dashboard reste pleinement fonctionnel sans scroll horizontal sur iPhone et Android, avec les mêmes informations et actions essentielles que sur desktop ;
+15. une règle qui dépend d'un fait réglementaire exclu/non disponible ne peut jamais produire OUI ;
+16. un cas connu de bundle, reconditionnement ou modification d'emballage est bloqué comme hors hypothèse V1 au lieu d'être traité comme le produit d'origine.
