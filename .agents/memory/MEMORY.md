@@ -1,0 +1,1 @@
+- [Amazon FBA cross-border flow](amazon-fba-cross-border-flow.md) — assess seller, supplier, stock/transit, FBA inventory and target market as separate route facts; never assume upstream EPR coverage.
