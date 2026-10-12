@@ -91,7 +91,7 @@ Marchés pris en charge V1 :
 - ES
 - GB
 
-Le moteur peut analyser un ou plusieurs marchés cibles, mais une analyse Solenda peut porter sur une marketplace précise.
+En V1, **une requête `POST /api/v1/analyses` porte sur une seule marketplace cible** via `target_marketplace`. Pour analyser plusieurs marketplaces, le dashboard ou Solenda lance plusieurs analyses ; un endpoint batch pourra être ajouté plus tard sans modifier le moteur métier.
 
 ## 8. Amazon
 
@@ -164,14 +164,33 @@ Distinguer :
 
 Une société apparentée ne doit jamais être automatiquement considérée comme l'entité REP responsable.
 
-## 12. Filières V1
+## 12. Filières V1 et complétude
 
-Minimum :
+Univers minimal V1 :
 - PACKAGING
 - EEE/WEEE
 - BATTERY
 
-Modèle extensible.
+Pour **chaque route candidate**, `streams[]` doit représenter **toutes les filières de l'univers V1**, même lorsqu'une filière est jugée non applicable ou que son applicabilité n'est pas résolue.
+
+Chaque entrée de filière porte un `applicability` interne :
+- `APPLICABLE` ;
+- `NOT_APPLICABLE` ;
+- `UNRESOLVED`.
+
+Règles :
+- `APPLICABLE` : le verdict dépend des règles et preuves de la filière ;
+- `NOT_APPLICABLE` : la filière ne bloque pas la route ; le verdict est OUI avec un reason code explicite ;
+- `UNRESOLVED` : le verdict est obligatoirement NON ;
+- **une filière ne peut jamais être omise pour permettre un OUI**.
+
+Le moteur conserve aussi un `stream_scope_state` au niveau de la route :
+- `COMPLETE` si le moteur a démontré que le périmètre de filières évalué est suffisant pour le produit et le marché ;
+- `UNRESOLVED` sinon.
+
+Une route ne peut être OUI que si `stream_scope_state = COMPLETE`.
+
+Le modèle reste extensible : l'ajout futur d'une filière étend l'univers évalué sans modifier ce principe de complétude.
 
 ## 13. Sources
 
@@ -209,7 +228,22 @@ Il doit :
 - conserver les informations manquantes comme état interne UNVERIFIED ;
 - préserver distinctement le stock fournisseur, chaque segment de transit/prep, le stock FBA et la marketplace cible.
 
-Une route possède un `route_id` stable dans l'analyse et une liste ordonnée de `segments`. Un trajet peut donc contenir zéro, un ou plusieurs prep centers sans changer le contrat API.
+Une route possède un `route_id` stable dans l'analyse et une liste ordonnée de `segments`.
+
+Types de segments V1 :
+- `SUPPLIER_STOCK` : stock physique chez le fournisseur ;
+- `TRANSIT` : passage logistique connu ou juridiquement pertinent sans prep center ;
+- `PREP_CENTER` : passage par un prep center réellement disponible ;
+- `FBA_INVENTORY` : pays de stockage/inventaire FBA connu ou à résoudre ;
+- `MARKETPLACE` : marché de vente cible.
+
+`TRANSIT` et `PREP_CENTER` peuvent apparaître zéro, une ou plusieurs fois. Le tableau `segments[]` donne l'ordre du parcours.
+
+Tout segment `PREP_CENTER` doit contenir un `prep_center_id` référençant un centre du profil client ; le pays seul ne suffit pas à identifier un centre disponible.
+
+Un transit de transporteur sans stockage ni effet sur la règle évaluée n'a pas besoin d'être inventé. En revanche, si un fait de transit est requis par une règle et reste inconnu, la route reste UNVERIFIED/NON.
+
+En V1, une route candidate représente un scénario de stockage FBA déterminé. Si plusieurs pays d'inventaire FBA sont possibles, le générateur produit des routes candidates distinctes afin de ne pas mélanger leurs effets réglementaires.
 
 ## 15. Verdict
 
@@ -278,7 +312,7 @@ Payload enrichi possible :
     "seller_country": "FR",
     "vat_countries": ["FR", "DE"],
     "prep_centers": [
-      {"country": "FR"}
+      {"id": "prep-fr-1", "country": "FR"}
     ],
     "existing_epr_registrations": [
       {
@@ -293,30 +327,78 @@ Payload enrichi possible :
 
 Les champs enrichis sont facultatifs.
 
-## 18. Réponse API — contrat de référence
+## 18. Contrat API V1 de référence
 
-Ce schéma est le **contrat de référence unique** pour la V1. L'Architecture doit rester alignée dessus.
+Cette section est la **source normative unique** du contrat V1. Les autres documents décrivent l'architecture mais ne doivent pas maintenir un second schéma indépendant.
+
+### Requête
+
+Une requête analyse exactement **une marketplace cible**.
+
+```json
+{
+  "identifier": "8710103995426",
+  "supplier_stock_country": "IT",
+  "target_marketplace": "DE",
+  "account_context": {
+    "seller_country": "FR",
+    "vat_countries": ["FR", "DE"],
+    "prep_centers": [
+      {"id": "prep-fr-1", "country": "FR"}
+    ],
+    "existing_epr_registrations": []
+  }
+}
+```
+
+Les enrichissements produit, fournisseur et Amazon restent facultatifs.
+
+### Réponse
 
 Valeurs utilisateur autorisées : `OUI` et `NON`.
 
 ```json
 {
   "analysis_id": "uuid",
+  "target_marketplace": "DE",
   "overall_verdict": "OUI",
   "routes": [
     {
       "route_id": "route-1",
       "route_verdict": "OUI",
+      "stream_scope_state": "COMPLETE",
       "segments": [
-        {"type": "SUPPLIER_STOCK", "country": "IT"},
-        {"type": "PREP_CENTER", "country": "FR"},
-        {"type": "FBA_INVENTORY", "country": "DE"},
-        {"type": "MARKETPLACE", "country": "DE"}
+        {
+          "segment_id": "seg-1",
+          "type": "SUPPLIER_STOCK",
+          "country": "IT"
+        },
+        {
+          "segment_id": "seg-2",
+          "type": "TRANSIT",
+          "country": "CH"
+        },
+        {
+          "segment_id": "seg-3",
+          "type": "PREP_CENTER",
+          "country": "FR",
+          "prep_center_id": "prep-fr-1"
+        },
+        {
+          "segment_id": "seg-4",
+          "type": "FBA_INVENTORY",
+          "country": "DE"
+        },
+        {
+          "segment_id": "seg-5",
+          "type": "MARKETPLACE",
+          "country": "DE"
+        }
       ],
-      "target_marketplace": "DE",
       "streams": [
         {
           "stream": "PACKAGING",
+          "applicability": "APPLICABLE",
           "verdict": "OUI",
           "internal_state": "VERIFIED",
           "reason_codes": ["ALL_REQUIRED_STREAMS_VERIFIED"],
@@ -324,10 +406,20 @@ Valeurs utilisateur autorisées : `OUI` et `NON`.
           "evidence": []
         },
         {
-          "stream": "EEE",
+          "stream": "EEE/WEEE",
+          "applicability": "APPLICABLE",
           "verdict": "OUI",
           "internal_state": "VERIFIED",
           "reason_codes": ["UPSTREAM_COVERAGE_VERIFIED"],
+          "missing_context": [],
+          "evidence": []
+        },
+        {
+          "stream": "BATTERY",
+          "applicability": "NOT_APPLICABLE",
+          "verdict": "OUI",
+          "internal_state": "VERIFIED",
+          "reason_codes": ["STREAM_NOT_APPLICABLE"],
           "missing_context": [],
           "evidence": []
         }
@@ -337,22 +429,34 @@ Valeurs utilisateur autorisées : `OUI` et `NON`.
 }
 ```
 
-### Règles d'agrégation
+### Invariants de sécurité
 
-- `stream.verdict = OUI` uniquement si cette filière est favorablement vérifiée.
-- `route_verdict = OUI` uniquement si **toutes les filières applicables requises** de cette route sont `OUI`.
-- `overall_verdict = OUI` si **au moins une route candidate** vers le ou les marchés demandés possède `route_verdict = OUI`.
-- sinon `overall_verdict = NON`.
+Pour chaque route :
+- `streams[]` contient toutes les filières de l'univers V1 ;
+- une filière `UNRESOLVED` a toujours `verdict = NON` ;
+- aucune filière ne peut être omise pour obtenir un OUI ;
+- `stream_scope_state = UNRESOLVED` force `route_verdict = NON`.
 
-Le verdict global répond donc à la question métier : **« existe-t-il au moins une route démontrée permettant de poursuivre sans nouvel enregistrement ? »**. Il ne signifie pas que toutes les routes sont favorables.
+### Agrégation
 
-`internal_state` est un champ technique destiné à l'audit, aux logs et aux vues de diagnostic. Il ne doit jamais être présenté comme une troisième décision commerciale à côté de OUI/NON.
+- filière `APPLICABLE` : OUI uniquement si elle est favorablement vérifiée ;
+- filière `NOT_APPLICABLE` : OUI uniquement comme absence de blocage pour cette filière, avec reason code explicite ;
+- filière `UNRESOLVED` : NON ;
+- `route_verdict = OUI` uniquement si le scope est COMPLETE et si **toutes** les entrées de `streams[]` ont `verdict = OUI` ;
+- `overall_verdict = OUI` si **au moins une route candidate** a `route_verdict = OUI`, sinon NON.
 
-Le même moteur et ce même contrat doivent répondre au dashboard autonome et à Solenda.
+Le verdict global signifie : **« au moins une route démontrée existe pour la marketplace demandée »**. Il ne signifie pas que toutes les routes sont favorables.
+
+`internal_state`, `applicability` et `stream_scope_state` sont des champs techniques d'audit/diagnostic. Ils ne constituent pas des décisions commerciales supplémentaires dans l'interface.
+
+Le même moteur et ce même contrat servent le dashboard autonome et Solenda.
 
 ## 19. Reason codes minimaux
 
 - ALL_REQUIRED_STREAMS_VERIFIED
+- STREAM_NOT_APPLICABLE
+- STREAM_APPLICABILITY_UNRESOLVED
+- EPR_STREAM_SCOPE_UNRESOLVED
 - NO_LOCAL_ENTITY_FOUND
 - EPR_REGISTRATION_NOT_FOUND
 - MULTIPLE_STREAMS_INCOMPLETE
@@ -418,7 +522,9 @@ Tables principales :
 - numéro REP de marque seul => insuffisant ;
 - numéro d'un autre pays => insuffisant ;
 - achat dans un pays ≠ couverture automatique dans un autre ;
-- toutes les filières requises doivent être traitées ;
+- toutes les filières V1 doivent être représentées dans `streams[]` ;
+- applicabilité d'une filière non résolue => NON ;
+- périmètre global des filières non résolu => NON ;
 - une donnée de route manquante ne doit bloquer que si la règle évaluée en dépend.
 
 ## 23. Hors périmètre V1
@@ -443,9 +549,11 @@ Avant d'activer des OUI réels pour une combinaison pays × filière × rôle :
 - **0 faux OUI** est toléré sur ce corpus ;
 - **100 % des OUI** doivent avoir une chaîne de preuve traçable jusqu'aux sources et à la version de règle utilisées ;
 - les cas de source indisponible, preuve amont incomplète et donnée FBA requise manquante doivent produire NON/UNVERIFIED ;
+- le corpus doit contenir, pour chaque combinaison pays × filière × rôle activée, **au moins 3 cas positifs indépendamment revus** et **au moins 3 cas négatifs ou ambigus** ; si ce minimum n'est pas disponible, les vrais OUI restent désactivés pour cette combinaison ;
+- le moteur doit retourner OUI sur **100 % des cas positifs de référence** du périmètre activé ; cela évite qu'un moteur retournant toujours NON puisse franchir le gate ;
 - les seuils et le corpus doivent être documentés avant leur utilisation, afin de ne pas être ajustés après observation des résultats.
 
-La couverture peut être faible en V1 : mieux vaut retourner NON/UNVERIFIED que produire un OUI insuffisamment prouvé.
+La couverture fonctionnelle peut rester limitée en V1, mais un périmètre activé doit démontrer à la fois sa sécurité (pas de faux OUI) et son utilité (reconnaissance des cas positifs de référence).
 
 La V1 est fonctionnelle si :
 1. elle accepte un identifiant produit ;
