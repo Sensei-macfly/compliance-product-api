@@ -32,11 +32,11 @@ Official Registry Matching
         ↓
 Supply-chain / Country Rules
         ↓
-EPR_STATUS per route × target market × stream
+Internal EPR_STATUS + registration assessment per route × target market × stream
         ↓
-GO / HOLD for this EPR check only
+Binary user decision: OUI / NON
         ↓
-Evidence + Reason Codes
+Plain-language explanation + auditable evidence
 ```
 
 ## Modules
@@ -130,15 +130,19 @@ Sortie :
 {
   "route_id": "...",
   "target_market": "FR",
-  "epr_status": "UNVERIFIED",
-  "registration_assessment": {
-    "outcome": "UNRESOLVED",
-    "entity_to_register": null,
-    "responsible_entity_id": null,
-    "evidence_ids": []
+  "decision": "NON",
+  "explanation": "Les preuves disponibles ne démontrent pas que la route peut être poursuivie sans nouvel enregistrement.",
+  "internal": {
+    "epr_status": "UNVERIFIED",
+    "registration_assessment": {
+      "outcome": "UNRESOLVED",
+      "entity_to_register": null,
+      "responsible_entity_id": null,
+      "evidence_ids": []
+    },
+    "action": "HOLD",
+    "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE"
   },
-  "action": "HOLD",
-  "reason_code": "INSUFFICIENT_OFFICIAL_EVIDENCE",
   "scope": {
     "supplier_stock_country": "DE",
     "prep_center_countries": ["FR"],
@@ -151,9 +155,9 @@ Sortie :
 }
 ```
 
-États possibles de `epr_status` : `VERIFIED`, `NON_COMPLIANT`, `UNVERIFIED`, `CONFLICT`. `HOLD` indique seulement que le parcours REP/EPR analysé ne doit pas être considéré comme vérifié ; il ne signifie pas à lui seul que la vente est interdite. Ne pas exposer `sell_allowed` ou `stock_allowed` comme conclusions générales sans couvrir les règles correspondantes.
+États internes possibles de `epr_status` : `VERIFIED`, `NON_COMPLIANT`, `UNVERIFIED`, `CONFLICT`. L'interface ne montre que `decision: OUI | NON` : OUI seulement si l'état interne est VERIFIED et la situation d'inscription est favorablement établie ; NON dans tous les autres cas. `HOLD` et les états détaillés restent internes. Un NON fondé sur une incertitude ne signifie ni interdiction juridique ni preuve qu'une inscription propre est obligatoire. Ne pas exposer `sell_allowed` ou `stock_allowed` comme conclusions générales sans couvrir les règles correspondantes.
 
-`registration_assessment.outcome` répond à la question métier : `SELLER_REGISTRATION_MISSING`, `SELLER_REGISTRATION_VERIFIED`, `UPSTREAM_COVERAGE_VERIFIED`, `NO_SELLER_REGISTRATION_REQUIRED` ou `UNRESOLVED`. Retourner l'entité et les preuves justifiant l'issue. Ne pas déclarer `UPSTREAM_COVERAGE_VERIFIED` sans règle de marché vérifiée et lien documenté avec le produit/parcours.
+`internal.registration_assessment.outcome` répond en interne à la question métier : `SELLER_REGISTRATION_MISSING`, `SELLER_REGISTRATION_VERIFIED`, `UPSTREAM_COVERAGE_VERIFIED`, `NO_SELLER_REGISTRATION_REQUIRED` ou `UNRESOLVED`. Retourner l'entité et les preuves justifiant l'issue ; afficher une explication en langage clair, sans transformer ces états en décisions visibles supplémentaires. Ne pas déclarer `UPSTREAM_COVERAGE_VERIFIED` sans règle de marché vérifiée et lien documenté avec le produit/parcours.
 
 ## Règles minimales
 

@@ -40,17 +40,17 @@ Analyse automatique :
 - ES
 - GB
 
-Marchés cibles déclarés pour la V1 : FR, DE, IT, ES, GB. Les pays fournisseurs/stock peuvent inclure d'autres pays de l'UE ; chaque combinaison de route d'approvisionnement/stockage et marché cible demandé doit obtenir un résultat distinct. Toute combinaison sans règle/source auditée reste NON VÉRIFIÉE. La matrice des marchés et routes n'est pas encore validée pays par pays.
+Marchés cibles déclarés pour la V1 : FR, DE, IT, ES, GB. Les pays fournisseurs/stock peuvent inclure d'autres pays de l'UE ; chaque combinaison de route d'approvisionnement/stockage et marché cible demandé doit obtenir un résultat distinct. Toute combinaison sans règle/source auditée reçoit NON dans l'interface et conserve NON VÉRIFIÉ en interne. La matrice des marchés et routes n'est pas encore validée pays par pays.
 
 ## Décision
 
-Le moteur conserve des états distincts :
+Le moteur conserve des états techniques distincts en interne :
 - **VÉRIFIÉ** : preuve suffisante pour le parcours REP/EPR délimité ;
 - **NON CONFORME** : obligation applicable et non remplie établies par des preuves suffisantes ;
 - **NON VÉRIFIÉ** : données, lien entre acteurs, classification ou source insuffisants ;
 - **CONTRADICTOIRE** : preuves pertinentes incompatibles.
 
-La recommandation pratique est « poursuivre » uniquement quand l'état est VÉRIFIÉ ; sinon, « suspendre / vérifier ». Cette recommandation de prudence n'affirme pas que la vente est juridiquement interdite. Pas de score de confiance visible.
+La sortie utilisateur reste strictement binaire : **OUI** seulement quand l'état interne est VÉRIFIÉ et que l'évaluation d'inscription est favorablement établie ; **NON** dans tous les autres cas. Les états internes ne doivent pas apparaître comme une troisième décision commerciale. Un NON pour données insuffisantes n'affirme ni que la vente est interdite ni que notre société est certainement tenue de s'enregistrer ; une explication indique les preuves manquantes. Pas de score de confiance visible.
 
 En plus de l'état des preuves, chaque route doit répondre à la question métier via un résultat distinct : `SELLER_REGISTRATION_MISSING`, `SELLER_REGISTRATION_VERIFIED`, `UPSTREAM_COVERAGE_VERIFIED`, `NO_SELLER_REGISTRATION_REQUIRED` ou `UNRESOLVED`. Ne pas traduire `UNRESOLVED` en « notre société doit s'enregistrer » sans règle qui établit sa responsabilité.
 
@@ -59,7 +59,7 @@ En plus de l'état des preuves, chaque route doit répondre à la question méti
 - Notre société est le vendeur sur Amazon ; Amazon intervient comme marketplace et fournisseur du fulfillment FBA selon le programme utilisé.
 - Le moteur doit connaître le programme de fulfillment et les pays d'inventaire FBA pertinents pour chaque route. Il ne doit pas déduire ces pays du pays fournisseur ou du marché Amazon ciblé.
 - Amazon SP-API est **facultative**.
-- Le moteur doit accepter des données de route saisies/importées sans identifiants SP-API ; si les pays de stock FBA sont inconnus, retourner NON VÉRIFIÉ lorsque cette donnée est nécessaire.
+- Le moteur doit accepter des données de route saisies/importées sans identifiants SP-API ; si les pays de stock FBA nécessaires sont inconnus, afficher NON et conserver NON VÉRIFIÉ en interne.
 - Une connexion Amazon pourra améliorer :
   - ASIN ↔ EAN/GTIN ;
   - titre ;

@@ -6,7 +6,7 @@ MVP autonome de **vérification de preuves REP/EPR par produit et parcours de ve
 
 Répondre à la question :
 
-> **Pour ce produit et cette route fournisseur → stock → prep center(s) → Amazon FBA, notre société doit-elle s'enregistrer dans chaque marché cible, ou la couverture REP/EPR d'une entité amont est-elle prouvée ?**
+> **Pour cette route et ce marché, peut-on poursuivre sans nouvel enregistrement REP/EPR/IDU de notre société, preuves à l'appui ?**
 
 ### Parcours à analyser
 
@@ -18,7 +18,7 @@ La société de l'utilisateur vend sur Amazon et utilise FBA. Le modèle doit di
 - marché de revente ciblé ;
 - entité vendeuse et éventuelle entité amont censée remplir les obligations, avec preuves du lien au produit/SKU.
 
-Le pays d'établissement du fournisseur, le pays de stock et le marché de vente ne sont pas interchangeables. L'API Amazon peut rester facultative ; les faits de route inconnus doivent être fournis ou donner NON VÉRIFIÉ.
+Le pays d'établissement du fournisseur, le pays de stock et le marché de vente ne sont pas interchangeables. L'API Amazon peut rester facultative ; les faits de route inconnus donnent une décision NON.
 
 ### Marchés analysés
 - France
@@ -29,14 +29,11 @@ Le pays d'établissement du fournisseur, le pays de stock et le marché de vente
 
 ### Sortie
 
-Un résultat par route réelle × marché cible × filière :
-- **VÉRIFIÉ**
-- **NON CONFORME**
-- **NON VÉRIFIÉ**
-- **CONTRADICTOIRE**
+La décision visible est binaire, par route réelle × marché cible × filière :
+- **OUI** : les preuves démontrent que la route peut être poursuivie sans nouvel enregistrement de notre société ;
+- **NON** : cette démonstration manque ou les preuves établissent qu'une exigence n'est pas satisfaite.
 
-Le moteur indique aussi si l'enregistrement de notre société manque, est déjà vérifié, si une couverture amont est prouvée, si aucun nouvel enregistrement n'est requis ou si la situation reste indéterminée.
-Une action prudente peut être GO/HOLD, mais HOLD ou NON VÉRIFIÉ ne signifie pas que la vente est interdite. **UNKNOWN ≠ COMPLIANT** : aucune preuve insuffisante ne produit VÉRIFIÉ.
+Les états détaillés (VÉRIFIÉ, NON CONFORME, NON VÉRIFIÉ, CONTRADICTOIRE) et les raisons restent internes. Un NON fondé sur des preuves insuffisantes n'est pas une interdiction juridique ni la preuve, à lui seul, que notre société doit s'enregistrer ; l'explication indique ce qui manque. **UNKNOWN ≠ COMPLIANT**.
 
 ## Positionnement
 
@@ -52,7 +49,7 @@ Ce projet **n'est pas une plateforme de sourcing**. Solenda reste la plateforme 
 - aucun score visible
 - toutes les conclusions doivent être explicables et auditables
 
-Les marchés cibles déclarés restent la France, l'Allemagne, l'Italie, l'Espagne et le Royaume-Uni. Les pays fournisseurs peuvent couvrir l'ensemble de l'UE. Une combinaison route/marché/filière non auditée reste NON VÉRIFIÉE.
+Les marchés cibles déclarés restent la France, l'Allemagne, l'Italie, l'Espagne et le Royaume-Uni. Les pays fournisseurs peuvent couvrir l'ensemble de l'UE. Une combinaison route/marché/filière non auditée reçoit NON.
 
 ## Documentation
 

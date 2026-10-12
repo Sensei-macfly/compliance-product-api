@@ -8,3 +8,9 @@ The user's company is the seller on Amazon. It buys products from suppliers and 
 **Why:** the user stated this business model; the answer depends on the full seller and fulfillment route, not just a product identifier or one supplier-country field.
 
 **How to apply:** represent supplier establishment, physical stock, prep-center locations, FBA program and known inventory countries, target market, seller entity and claimed upstream responsible entity separately. Do not infer that an upstream registration covers the seller, product/SKU, category or route without applicable rules and evidence.
+
+For the user-facing decision, expose only OUI/NON for whether the route can proceed without a new seller registration. Keep detailed states such as UNVERIFIED and their reason codes internal; explain a NON due to missing proof without presenting it as a legal prohibition or a proven duty to register.
+
+**Why:** the user explicitly wants internal uncertainty states preserved without turning them into a third commercial decision.
+
+**How to apply:** return OUI only when the required evidence establishes a favorable result; return NON for all other internal states, with plain-language explanation and evidence details.

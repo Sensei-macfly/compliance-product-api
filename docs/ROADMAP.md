@@ -89,7 +89,8 @@ Pour chaque pays :
 ## Phase 5 — Compliance Engine
 
 - [ ] règles pays/filières
-- [ ] états VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE
+- [ ] conserver VÉRIFIÉ / NON CONFORME / NON VÉRIFIÉ / CONTRADICTOIRE comme états internes
+- [ ] afficher seulement OUI / NON et expliquer pourquoi un NON peut être dû à une preuve manquante, sans conclure à une interdiction
 - [ ] décision d'inscription : requise/absente, société déjà enregistrée, couverture amont vérifiée, non requise, ou indéterminée
 - [ ] action HOLD distincte d'une conclusion sur le droit général de vendre
 - [ ] reason codes
@@ -104,8 +105,8 @@ Pour chaque pays :
 - [ ] programme FBA et pays d'inventaire connus
 - [ ] fiche produit
 - [ ] matrice de toutes les routes réellement fournies × marchés cibles demandés
-- [ ] routes/règles non prises en charge clairement marquées NON VÉRIFIÉES
-- [ ] raisons et preuves pour chaque état
+- [ ] routes/règles non prises en charge affichées NON, avec explication claire et état technique conservé en interne
+- [ ] raisons et preuves associées à chaque décision OUI / NON
 - [ ] entité qui devrait s'enregistrer et preuves de couverture amont
 - [ ] obligations détectées
 - [ ] entités et numéros
