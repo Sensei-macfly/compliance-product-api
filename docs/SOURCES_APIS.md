@@ -111,7 +111,9 @@ Statut : **SOURCE CANDIDATE DU PILOTE FRANCE / EEE**. Ce registre permet de vér
 
 Limite centrale : le jeu établit un enregistrement d'une entité dans une filière/catégorie. Il ne prouve pas la relation entre le produit identifié par GTIN, le vendeur évalué, son fournisseur et l'entité enregistrée. Cette relation doit venir d'une source indépendante ou rester **NON VÉRIFIÉE**.
 
-Pour un client vendeur sur Amazon et utilisant FBA, l'API ADEME peut contribuer à vérifier une inscription française pour l'entité et la filière interrogées. Elle ne détermine pas si la société vendeuse évaluée doit elle-même s'enregistrer, ne prouve pas qu'un fournisseur couvre ce GTIN/SKU, et ne décrit ni les passages en prep center ni les pays de stockage FBA. Ces faits et l'applicabilité doivent être évalués séparément pour chaque route candidate et marché cible.
+Pour un client vendeur sur Amazon, l'API ADEME peut contribuer à vérifier une inscription française pour l'entité et la filière interrogées. Elle ne détermine pas, seule, si la société vendeuse évaluée doit elle-même porter une obligation, et ne prouve pas qu'un fournisseur ou une entité amont couvre ce GTIN/SKU.
+
+La V1 ne modélise ni prep center, ni transit, ni pays de stockage FBA, ni route logistique. Si une règle de responsabilité ou de couverture dépend d'un fait exclu de la V1 et que ce fait ne peut pas être établi par une preuve admissible, la filière doit rester UNVERIFIED/UNRESOLVED et le verdict ne peut pas être OUI. Les notions de prep center, transit, reconditionnement et stockage FBA sont donc des sujets V2 sauf lorsqu'une information connue révèle qu'une hypothèse V1 est violée ; dans ce cas, l'analyse V1 doit rester non concluante plutôt que supposer le fait favorable.
 
 Références officielles :
 - [Recherche de producteurs REP (ADEME)](https://filieres-rep.ademe.fr/recherche-producteurs)
