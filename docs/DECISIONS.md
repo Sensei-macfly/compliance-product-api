@@ -1,127 +1,128 @@
 # Décisions produit — V1
 
-Ce document fixe les décisions déjà validées afin d'éviter les dérives de scope.
+Ce document fixe les décisions validées afin d'éviter les dérives de scope.
 
 ## Positionnement
 
 - Le projet est un **MVP autonome de compliance REP/EPR**.
 - Il **ne doit pas devenir une plateforme de sourcing**.
-- La plateforme de sourcing existe déjà : **Solenda**.
-- Le moteur est **API-first** : le dashboard du projet et les applications clientes tierces appellent le même contrat, avec les données isolées par client/tenant.
-- Le MVP doit fonctionner pour plusieurs clients, pas seulement pour la société du créateur.
-- Si le MVP est concluant, le moteur pourra aussi être intégré à Solenda sous forme d'API/module.
+- Solenda reste la plateforme de sourcing.
+- Le moteur est **API-first**.
+- Le dashboard autonome et Solenda appellent le même moteur.
+- Le moteur doit être multi-client / multi-tenant.
 
-## UX : hypothèse à valider
+## Principe central
 
-Deux champs avaient été proposés :
-1. identifiant produit : EAN / GTIN / UPC / ASIN ;
-2. pays où le produit est physiquement stocké chez le fournisseur.
+Le client fournit des **faits**. Le moteur produit les **déductions**.
 
-Ils ne suffisent pas, à eux seuls, à déterminer l'entité qui porte l'obligation REP/EPR ni à générer les routes possibles. Ne pas figer l'UX à deux champs ni coder une route unique ; définir plutôt les données de profil client et les transitions nécessaires au générateur.
+Le client ne doit pas avoir à déclarer :
+- « je peux stocker en Allemagne » ;
+- « cette route est possible » ;
+- « je suis couvert REP dans ce pays ».
 
-Le pilote devra au minimum pouvoir identifier l'acteur évalué et son rôle dans le parcours, l'entité qui est censée remplir l'obligation, ainsi que les attributs produit nécessaires à la classification. Le pays de stock est un contexte logistique tant que son effet réglementaire dans ce parcours n'a pas été établi.
+Le moteur doit générer les routes candidates à partir des faits disponibles et des règles documentées.
 
-Modèle commercial de départ : le créateur vend sur Amazon et s'approvisionne dans plusieurs pays européens, mais le produit doit évaluer l'entité vendeuse de chaque client. Les marchandises peuvent passer par des prep centers avant Amazon FBA, puis être vendues sur plusieurs marketplaces.
+## Données persistantes du profil client
 
-Générer les routes candidates depuis le profil client, les pays de sourcing/stock, le produit, les prep centers disponibles, la configuration FBA et les marketplaces demandées. Distinguer établissement fournisseur, stock physique, prep centers, pays FBA, programme et cible. Ne pas coder un trajet prédéfini ni croiser arbitrairement des pays sans données de transition.
+Le profil contient principalement :
+- entité vendeuse ;
+- pays d'établissement ;
+- pays où le client dispose d'une immatriculation TVA ;
+- prep centers réellement disponibles ;
+- paramètres Amazon/FBA explicitement connus lorsqu'ils sont disponibles automatiquement ou transmis par Solenda.
 
-Les pays d'immatriculation TVA du client peuvent être un attribut de configuration pour filtrer des routes selon des règles documentées ; ils ne prouvent ni éligibilité FBA ni conformité/couverture REP/EPR.
+La TVA est une donnée de profil utile, mais :
+- elle ne prouve pas la conformité REP/EPR ;
+- elle ne prouve pas à elle seule qu'un stockage FBA est possible ;
+- elle ne doit pas servir de raccourci réglementaire.
 
-Ne pas demander systématiquement :
-- numéro de TVA ;
-- numéro REP personnel ;
-- configuration fiscale complexe ;
-- compte Amazon.
+## Données transactionnelles
 
-Demander toutefois un identifiant juridique adéquat lorsque nécessaire pour résoudre une entité. Pour les entreprises non résidentes, la source ADEME peut utiliser un numéro fiscal étranger ou un numéro de TVA intracommunautaire. L'identifiant demandé dépendra de l'entité et de la source du pilote.
+À chaque analyse, fournir ou enrichir :
+- EAN / GTIN / UPC / ASIN ;
+- données produit disponibles ;
+- pays de sourcing / pays réel du stock fournisseur ;
+- marketplace cible ;
+- fournisseur lorsque connu.
 
-## Marchés
+Solenda pourra transmettre ces informations directement via l'API.
 
-Analyse automatique :
-- FR
-- DE
-- IT
-- ES
-- GB
+## REP/EPR détenues par le client
 
-Marchés cibles déclarés pour la V1 : FR, DE, IT, ES, GB. Les pays fournisseurs/stock peuvent inclure d'autres pays de l'UE ; générer un résultat pour chaque route candidate et marché demandé. Toute combinaison sans règle/source auditée reçoit NON dans l'interface et conserve NON VÉRIFIÉ en interne. La matrice des marchés et routes n'est pas encore validée pays par pays.
+Les enregistrements REP/EPR/IDU déjà détenus par le client **ne sont pas une donnée centrale de la V1**.
 
-## Décision
+L'objectif principal est d'identifier les routes qui **évitent** d'imposer un nouvel enregistrement au client.
 
-Le moteur conserve des états techniques distincts en interne :
-- **VÉRIFIÉ** : preuve suffisante pour le parcours REP/EPR délimité ;
-- **NON CONFORME** : obligation applicable et non remplie établies par des preuves suffisantes ;
-- **NON VÉRIFIÉ** : données, lien entre acteurs, classification ou source insuffisants ;
-- **CONTRADICTOIRE** : preuves pertinentes incompatibles.
+Le modèle peut rester extensible pour prendre en compte une immatriculation existante plus tard, mais elle ne doit pas structurer l'UX ni le moteur V1.
 
-La sortie utilisateur reste strictement binaire : **OUI** seulement quand l'état interne est VÉRIFIÉ et que l'évaluation d'inscription est favorablement établie ; **NON** dans tous les autres cas. Les états internes ne doivent pas apparaître comme une troisième décision commerciale. Un NON pour données insuffisantes n'affirme ni que la vente est interdite ni que l'entité vendeuse évaluée est certainement tenue de s'enregistrer ; une explication indique les preuves manquantes. Pas de score de confiance visible.
+## Routes
 
-En plus de l'état des preuves, chaque route doit répondre à la question métier via un résultat distinct : `SELLER_REGISTRATION_MISSING`, `SELLER_REGISTRATION_VERIFIED`, `UPSTREAM_COVERAGE_VERIFIED`, `NO_SELLER_REGISTRATION_REQUIRED` ou `UNRESOLVED`. Ne pas traduire `UNRESOLVED` en « l'entité vendeuse doit s'enregistrer » sans règle qui établit sa responsabilité.
+Le moteur génère les routes candidates raisonnables à partir :
+- du pays de stock fournisseur ;
+- des prep centers réellement disponibles ;
+- de la marketplace cible ;
+- des faits Amazon/FBA explicitement connus ;
+- des règles et contraintes documentées.
+
+Ne pas coder une route unique.
+Ne pas demander au client de construire lui-même le trajet.
+Ne pas croiser arbitrairement tous les pays sans règle ou donnée justificative.
+
+## UX autonome
+
+L'analyse autonome doit rester simple.
+
+Cible V1 :
+1. identifiant produit ;
+2. pays de sourcing / stock fournisseur ;
+3. marketplace cible.
+
+Les autres données doivent venir :
+- du profil client ;
+- des providers ;
+- de Solenda ;
+- ou être demandées uniquement lorsqu'elles sont réellement nécessaires.
+
+## Verdict
+
+L'utilisateur voit uniquement :
+- **OUI**
+- **NON**
+
+Les états internes peuvent être :
+- VERIFIED
+- UNVERIFIED
+- NON_COMPLIANT
+- CONTRADICTORY
+
+Un NON lié à un manque de preuve ne signifie pas « vente juridiquement interdite ». L'explication doit préciser ce qui manque.
+
+Aucun score de confiance visible.
 
 ## Amazon
 
-- Le cas d'usage initial est celui de la société du créateur, vendeuse sur Amazon ; le moteur évalue toutefois l'entité vendeuse de chaque client. Amazon intervient comme marketplace et fournisseur du fulfillment FBA selon le programme utilisé.
-- Le moteur doit connaître le programme de fulfillment et les pays d'inventaire FBA pertinents pour chaque route. Il ne doit pas déduire ces pays du pays fournisseur ou du marché Amazon ciblé.
-- Amazon SP-API est **facultative**.
-- Le moteur doit accepter des données de route saisies/importées sans identifiants SP-API ; si les pays de stock FBA nécessaires sont inconnus, afficher NON et conserver NON VÉRIFIÉ en interne.
-- Une connexion Amazon pourra améliorer :
-  - ASIN ↔ EAN/GTIN ;
-  - titre ;
-  - marque ;
-  - manufacturer ;
-  - product type ;
-  - catégories et attributs.
-- Amazon n'est jamais une preuve juridique de conformité REP.
-
-## Coûts / providers
-
-La V1 doit fonctionner sans dépendance commerciale obligatoire.
-
-Ne pas rendre obligatoires :
-- OpenCorporates payant ;
-- Orbis ;
-- Dun & Bradstreet ;
-- Creditsafe ;
-- Kompass ;
-- autres APIs payantes.
+- Amazon SP-API est facultative.
+- Le moteur doit fonctionner sans compte Amazon Professional.
+- Les données Amazon peuvent enrichir l'analyse.
+- Amazon ne constitue jamais une preuve juridique REP/EPR.
+- Le moteur ne doit pas exiger que l'utilisateur renseigne manuellement un « pays FBA possible » s'il peut le déduire ou si cette donnée n'est pas nécessaire à la règle évaluée.
 
 ## Responsabilité REP
 
-Ne jamais considérer que :
+Ne jamais appliquer :
 
 ```text
-numéro REP trouvé = produit/lot couvert
+numéro REP trouvé = produit couvert
 ```
 
 Le moteur doit distinguer :
 1. produit identifié ;
-2. l'entité vendeuse du client et son rôle identifiés ;
-3. fournisseur, fabricant/producteur et entité amont identifiés ;
-4. enregistrement vérifié dans le pays et la filière/catégorie applicables ;
-5. preuve reliant l'entité enregistrée au produit/SKU et au parcours ;
-6. applicabilité à l'entité vendeuse évaluée, au marché cible et au parcours FBA analysée selon une règle vérifiée.
-
-## Données insuffisantes
-
-Les motifs internes comprennent notamment preuve insuffisante, entité ou rôle non résolu, registre indisponible, filière non vérifiée et conflit de données. Ils ne doivent pas être réduits à « NON CONFORME ».
-
-Un résultat positif exige de justifier le lien entre le producteur enregistré, le produit ou la catégorie applicable et le parcours commercial évalué. Un IDU de marque, ou la présence d'un IDU au nom d'une société apparentée, ne suffit pas automatiquement.
-
-## Faisabilité de la source et pilote end-to-end
-
-- Source candidate vérifiée : jeu ADEME/SYDEREP des producteurs et IDU, filière EEE, France. Il vérifie uniquement la disponibilité d'une preuve d'enregistrement française.
-- Le jeu comporte une API publique, un téléchargement, une licence ouverte, une actualisation annoncée quotidienne et des champs de filière, identifiant de société, pays, IDU, catégories d'agrément, immatriculation et raison sociale.
-- Cette source vérifie un enregistrement d'entité pour une filière/catégorie ; elle ne fournit ni GTIN, ni preuve à elle seule du lien entre l'entité et la société vendeuse évaluée, le fournisseur, le produit ou le trajet.
-- Le pilote end-to-end doit valider la génération des routes à partir de profils et contraintes clients ; les cas de test ne doivent pas devenir des routes fixes codées en dur.
-- Un identifiant amont ne signifie pas automatiquement que la société vendeuse évaluée n'a rien à enregistrer : l'applicabilité et les preuves de couverture doivent être vérifiées par marché, rôle, filière et catégorie.
-- La faisabilité de la source ne vaut pas validation juridique des règles d'applicabilité, ni validation des sources pour l'Allemagne, l'Italie, l'Espagne ou le Royaume-Uni.
-
-## Profil utilisateur
-
-Pour chaque client, les fournisseurs/sources, pays d'immatriculation TVA, prep centers disponibles, programmes/pays FBA et marchés cibles doivent être configurables. Les applications clientes peuvent envoyer ces données enrichies via la même API que le dashboard.
-
-Ne pas collecter un numéro de TVA sans besoin précis. Si la résolution sûre d'une entité étrangère exige un identifiant fiscal ou un numéro de TVA que les données disponibles ne fournissent pas, l'analyse concernée reste NON VÉRIFIÉE.
+2. marque / fabricant / titulaire identifiés ;
+3. entité juridique locale résolue ;
+4. enregistrement officiel vérifié ;
+5. lien entre l'entité, la filière, le produit et le marché ;
+6. applicabilité à la route analysée.
 
 ## V1 ≠ avis juridique
 
-L'application produit une **vérification de preuves REP/EPR circonscrite et datée**, pas un avis juridique définitif ni une validation générale de la possibilité de vendre. Toute extension de portée exige des règles documentées, une preuve traçable et une validation métier/réglementaire.
+L'application produit une **pré-validation automatisée, conservatrice et traçable**, pas un avis juridique définitif.
