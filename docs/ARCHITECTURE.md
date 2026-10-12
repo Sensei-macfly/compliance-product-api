@@ -22,6 +22,19 @@ Elle ne modélise pas :
 - stockage FBA ;
 - redistribution Amazon.
 
+La suppression du Route Generator est une simplification de représentation, pas une simplification de la preuve réglementaire.
+
+### Safety gate des faits requis
+
+Chaque règle `market × stream × role` doit déclarer ses faits réglementaires requis.
+
+Si la détermination du rôle, de l'applicabilité ou de la couverture nécessite un fait non disponible ou hors scope V1, le moteur doit faire fail-closed :
+- `UNVERIFIED` / `UNRESOLVED` ;
+- verdict filière NON ;
+- overall NON.
+
+Aucun pays FBA, rôle d'importateur, première mise sur le marché, absence de reconditionnement ou autre fait favorable ne peut être inventé pour permettre OUI.
+
 Le cœur d'analyse est :
 
 ```text
@@ -134,6 +147,8 @@ produit
 Un numéro officiel peut être vérifié tout en laissant la couverture produit UNPROVEN.
 
 Seul `UPSTREAM_VERIFIED` permet un OUI sur une filière applicable.
+
+`UPSTREAM_VERIFIED` n'est atteignable que si tous les faits requis par la règle activée sont établis. Si une règle nécessite un fait logistique/rôle exclu du modèle V1 et que ce fait n'est pas prouvé, la couverture reste UNPROVEN/UNRESOLVED.
 
 ## Verdict
 
