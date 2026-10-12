@@ -24,6 +24,9 @@ Valider le moteur REP/EPR comme brique indépendante avant intégration éventue
 ## Gate avant développement du moteur
 
 Avant d'autoriser un OUI réel :
+- [ ] corpus de référence figé avant évaluation ;
+- [ ] 0 faux OUI sur ce corpus pour le périmètre activé ;
+- [ ] 100 % des OUI avec chaîne de preuve traçable ;
 - [ ] chaîne de preuve documentée ;
 - [ ] règle pays × filière × rôle documentée ;
 - [ ] données minimales nécessaires définies ;
@@ -83,12 +86,15 @@ Amazon SP-API : optionnelle.
 
 ## Phase 5 — Registres
 
-Ordre proposé :
-1. France
-2. Allemagne
-3. Royaume-Uni
-4. Espagne
-5. Italie
+Pilote end-to-end initial :
+1. **France / EEE via ADEME/SYDEREP**, pour valider le connecteur de preuve d'enregistrement et la chaîne evidence → règle → verdict, sans considérer l'IDU seul comme preuve de couverture produit/route.
+
+Puis :
+2. autres filières France après validation de la chaîne de preuve
+3. Allemagne
+4. Royaume-Uni
+5. Espagne
+6. Italie
 
 Pour chaque pays :
 - [ ] source officielle
