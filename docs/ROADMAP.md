@@ -10,7 +10,7 @@ Valider un moteur de couverture REP/EPR amont par produit et marché avant inté
 - [x] dashboard + Solenda sur le même moteur
 - [x] OUI/NON uniforme
 - [x] UNKNOWN ≠ COMPLIANT
-- [x] identifiant + stock fournisseur physique + marché cible
+- [x] identifiant + stock fournisseur physique + marché cible + product_handling_mode explicite
 - [x] suppression des pays FBA devinés
 - [x] suppression du Route Generator V1
 - [x] suppression prep center / transit / stockage FBA du noyau V1
@@ -20,6 +20,8 @@ Valider un moteur de couverture REP/EPR amont par produit et marché avant inté
 - [x] UX : numéros visibles même sur NON
 - [x] messages utilisateur français / codes techniques anglais
 - [x] fail-closed si un fait réglementaire requis est absent ou hors périmètre V1
+- [x] UNKNOWN/absence de product_handling_mode interdit OUI
+- [x] APPLICABLE + OUI exige evidence[] non vide
 - [ ] auditer les sources officielles
 - [ ] valider les règles pays × filière × rôle
 - [ ] constituer le corpus de référence
@@ -30,6 +32,7 @@ Pour chaque combinaison pays × filière × rôle :
 - [ ] corpus figé avant évaluation
 - [ ] 0 faux OUI
 - [ ] 100 % des OUI traçables
+- [ ] aucune filière APPLICABLE avec OUI et evidence=[]
 - [ ] au moins 3 cas positifs indépendamment revus
 - [ ] au moins 3 cas négatifs/ambigus
 - [ ] 100 % des cas positifs reconnus
@@ -127,6 +130,7 @@ Entrées :
 - [ ] identifier
 - [ ] supplier_stock_country
 - [ ] target_marketplace
+- [ ] product_handling_mode via confirmation explicite non cochée par défaut
 
 Afficher immédiatement :
 - [ ] OUI/NON
@@ -169,6 +173,12 @@ Afficher immédiatement :
 - [ ] couverture amont complète
 - [ ] contradiction entre sources
 - [ ] règle nécessitant un fait réglementaire hors scope/non disponible => NON
+- [ ] product_handling_mode absent => NON/UNVERIFIED
+- [ ] product_handling_mode UNKNOWN => NON/UNVERIFIED
+- [ ] product_handling_mode BUNDLED => NON/UNVERIFIED
+- [ ] product_handling_mode REPACKAGED => NON/UNVERIFIED
+- [ ] ORIGINAL_UNMODIFIED + preuves complètes => OUI possible
+- [ ] APPLICABLE + OUI + evidence=[] => réponse invalide / NON-UNVERIFIED
 - [ ] produit connu comme bundlé/reconditionné/modifié => NON/UNVERIFIED
 - [ ] même GTIN analysé sur plusieurs marchés via appels distincts
 
