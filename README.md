@@ -12,7 +12,10 @@ Le moteur travaille à partir de faits simples :
 - identifiant produit : EAN / GTIN / UPC / ASIN ;
 - pays où le produit est physiquement stocké chez le fournisseur au moment du sourcing ;
 - marketplace cible ;
+- confirmation explicite du mode de traitement produit (`ORIGINAL_UNMODIFIED` en V1) ;
 - identité de l'entité vendeuse depuis le profil client.
+
+Le mode de traitement n'a **aucune valeur par défaut favorable** : champ absent ou `UNKNOWN` => pas de OUI.
 
 ## Simplification V1
 
@@ -38,7 +41,7 @@ Ces sujets pourront être traités dans une V2 si une règle réglementaire ou u
 - décision utilisateur : **OUI / NON**
 - **UNKNOWN ≠ COMPLIANT**
 - un numéro REP/IDU trouvé ne prouve jamais, à lui seul, la couverture du produit
-- un OUI sur une filière applicable exige une **couverture amont vérifiée**
+- un OUI sur une filière applicable exige une **couverture amont vérifiée et une chaîne de preuves non vide et traçable**
 - une immatriculation propre du vendeur n'est **pas** considérée comme le scénario favorable recherché par la V1
 
 ## Positionnement
