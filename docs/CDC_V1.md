@@ -360,6 +360,14 @@ Le résultat doit montrer immédiatement :
 
 Même sur un résultat NON, les éléments correctement vérifiés doivent rester visibles.
 
+Le dashboard V1 doit être entièrement responsive et conserver la totalité des fonctions métier sur :
+- desktop ;
+- tablette ;
+- iPhone / Safari ;
+- Android / Chrome.
+
+Une application native iOS/Android n'est pas requise pour la V1.
+
 Voir `docs/UX_V1.md`.
 
 ## 17. Données principales
@@ -446,4 +454,5 @@ La V1 est fonctionnelle si :
 10. elle produit des explications utilisateur en français ;
 11. les codes techniques restent en anglais ;
 12. dashboard et Solenda utilisent le même moteur et le même contrat ;
-13. Amazon SP-API n'est pas obligatoire.
+13. Amazon SP-API n'est pas obligatoire ;
+14. le dashboard reste pleinement fonctionnel sans scroll horizontal sur iPhone et Android, avec les mêmes informations et actions essentielles que sur desktop.
